@@ -1,72 +1,96 @@
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import os
+import time
 import openpyxl
 
 OUTPUT_DATA_DIR = "./data"
+os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
 
 def timestampToDatetime(timestamp_ms):
-    dt = datetime.fromtimestamp(int(timestamp_ms/1000))
-    return dt
+    return datetime.fromtimestamp(timestamp_ms / 1000)
 
-def datetimeToTimestamp(date_time):
-    ts_ms = datetime.timestamp(date_time) * 1000
-    return int(ts_ms)
+def datetimeToTimestamp(dt):
+    return int(dt.timestamp() * 1000)
 
-
+# --- Fetch all BTC option instruments (include expired) ---
+print("Loading instrument metadata...")
 url = "https://www.deribit.com/api/v2/public/get_instruments"
 params = {
     "currency": "BTC",
     "kind": "option",
-    "expired": "true"  # Include expired options
+    "expired": "true"
 }
 resp = requests.get(url, params=params)
 data = resp.json()['result']
+print(f"Total instruments loaded: {len(data)}")
 
-# # Filter an instrument, e.g. ATM call near a certain expiry
-# for i in data:
-#     if i['strike'] == 92000.0 and i['expiration_timestamp'] < 1680000000000:
-#         print(i['instrument_name'])
-
-print("deal data loaded")
-
+# --- Initialize output storage ---
 data_dfs = []
 trades_dfs = []
 trades_merge_dfs = []
-for k in range(len(data)):
-    instrument_name = data[k]['instrument_name'] #"BTC-30JUN23-60000-C"  # Replace with desired
-    url = "https://www.deribit.com/api/v2/public/get_last_trades_by_instrument_and_time"
-    starttimestamp = int(data[k]['creation_timestamp'])
+
+# --- Loop through each instrument ---
+for instrument in data:
+    instrument_name = instrument['instrument_name']
+    start_timestamp = instrument['creation_timestamp']
     end_timestamp = datetimeToTimestamp(datetime.now())
-    params = {
-        "instrument_name": instrument_name,
-        "start_timestamp": starttimestamp,  # March 1, 2023
-        "end_timestamp": end_timestamp,    # March 3, 2023
-        "count": 1000
-    }
-    resp = requests.get(url, params=params)
-    trades = resp.json()['result']['trades']
 
-    # Print price and time
-    for trade in trades:
-        print(trade['price'], trade['timestamp'])
-    
-    # convert to DataFrame and merge
-    if trades:
-        data_df = pd.DataFrame(data[k])
-        data_df['creation_timestamp'] = pd.to_datetime(data_df['creation_timestamp'], unit='ms').apply(lambda x: x.isoformat())
-        data_df['expiration_timestamp'] = pd.to_datetime(data_df['expiration_timestamp'], unit='ms').apply(lambda x: x.isoformat())
+    print(f"\nFetching trades for: {instrument_name}")
 
-        trade_df = pd.DataFrame(trades)
-        trade_df['timestamp'] = pd.to_datetime(trade_df['timestamp'], unit='ms').apply(lambda x: x.isoformat())
+    all_trades = []
+    max_pages = 20  # Prevent infinite loop on very active options
+
+    while True:
+        url = "https://www.deribit.com/api/v2/public/get_last_trades_by_instrument_and_time"
+        params = {
+            "instrument_name": instrument_name,
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+            "count": 1000
+        }
+        try:
+            resp = requests.get(url, params=params)
+            result = resp.json().get('result', {})
+            trades = result.get('trades', [])
+        except Exception as e:
+            print(f"Error fetching trades for {instrument_name}: {e}")
+            break
+
+        if not trades:
+            break
+
+        all_trades.extend(trades)
+
+        # Step back in time
+        min_timestamp = min(t['timestamp'] for t in trades)
+        end_timestamp = min_timestamp - 1
+
+        if end_timestamp < start_timestamp:
+            break
+
+        time.sleep(0.2)
+
+    if all_trades:
+        trades_df = pd.DataFrame(all_trades)
+        trades_df['timestamp'] = pd.to_datetime(trades_df['timestamp'], unit='ms')
+        trades_df['instrument_name'] = instrument_name
+
+        data_df = pd.DataFrame([instrument])
+        data_df['creation_timestamp'] = pd.to_datetime(data_df['creation_timestamp'], unit='ms')
+        data_df['expiration_timestamp'] = pd.to_datetime(data_df['expiration_timestamp'], unit='ms')
+
+        merged_df = trades_df.merge(data_df, how='left', on='instrument_name')
+
+        trades_dfs.append(trades_df)
         data_dfs.append(data_df)
-        trades_dfs.append(trade_df)
-        trade_merge_df = trade_df.merge(data_df, how="left", on="instrument_name")
-        trades_merge_dfs.append(trade_merge_df)
+        trades_merge_dfs.append(merged_df)
 
-historical_data_df = pd.concat(data_dfs, ignore_index=True)
-historical_trade_df = pd.concat(trades_dfs, ignore_index=True)
-historical_df = pd.concat(trades_merge_dfs, ignore_index=True)
-os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
-historical_df.to_excel(OUTPUT_DATA_DIR + "/historical.xlsx", index=False)
+# --- Combine and export ---
+if trades_merge_dfs:
+    historical_df = pd.concat(trades_merge_dfs, ignore_index=True)
+    print(f"\nTotal trades collected: {len(historical_df)}")
+    historical_df.to_excel(os.path.join(OUTPUT_DATA_DIR, "historical_option_trades.xlsx"), index=False)
+else:
+    print("No trade data found.")
