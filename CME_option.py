@@ -7,6 +7,7 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from tqdm import tqdm
 
 loadDate = dt.now()
 keepOpen = True
@@ -103,15 +104,11 @@ for d in range(DAYS_BACK + 1):
                 # WebDriverWait(driver, 20).until(lambda dr: len(dr.find_element(By.CLASS_NAME, "main-table-wrapper").text) > len(textBeforeLoadAll))
                 WebDriverWait(driver, 20).until(isNumTrTableChange)
             ret = driver.find_element(By.CLASS_NAME, "main-table-wrapper")
-        #     # WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.ID, "productTabData")))
-            # textAfterLoadAll = ret.text
-            # print(textAfterLoadAll)
-        # # primary load-all btn btn-
-
+            
             table = ret.find_element(By.TAG_NAME, "table")
             tbody = table.find_element(By.TAG_NAME, "tbody")
             trs = tbody.find_elements(By.TAG_NAME, "tr")
-            for tr in trs:
+            for tr in tqdm(trs):
                 tds = tr.find_elements(By.TAG_NAME, "td")
 
                 dates.append(loadDate.isoformat())
