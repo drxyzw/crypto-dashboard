@@ -26,7 +26,6 @@ options.add_experimental_option("detach", False)
 
 driver = webdriver.Chrome(options=options)
 
-DAYS_BACK = 90
 dates = []
 optionTypes = []
 expiries = []
@@ -57,12 +56,11 @@ labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label'
 DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
 DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
 
-# for d in range(DAYS_BACK + 1):
-for i_date, loadDate in enumerate(DateChoices):
+for i_date, evalDate in enumerate(DateChoices):
 
-    dd = f'{loadDate.day:02d}'
-    mm = f'{loadDate.month:02d}'
-    yyyy = f'{loadDate.year:04d}'
+    dd = f'{evalDate.day:02d}'
+    mm = f'{evalDate.month:02d}'
+    yyyy = f'{evalDate.year:04d}'
     url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
     driver.get(url_date)
     if i_date != 0:
@@ -126,7 +124,7 @@ for i_date, loadDate in enumerate(DateChoices):
                 );
                 """)
             for tds in trs:
-                dates.append(loadDate.isoformat())
+                dates.append(evalDate.isoformat())
                 optionTypes.append(typeChoices[i_type])
                 expiries.append(expiryChoices[i_exp])
 
@@ -155,7 +153,7 @@ for i_date, loadDate in enumerate(DateChoices):
                 # dfs.append(pd.DataFrame(dic))
             print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
             time.sleep(2.0) # to avoid being blocked by server
-    print("Finished for " + str(loadDate)) 
+    print("Finished for " + str(evalDate)) 
 
 # export to file
 dic = {
