@@ -8,11 +8,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from tqdm import tqdm
+import time
+import os
+import pandas as pd
 
 loadDate = dt.now()
+OUTPUT_FILE = "CME_BTC_Option_" + loadDate.isoformat() + ".xlsx"
+OUTPUT_FILE = OUTPUT_FILE.replace(":", "")
 keepOpen = True
 
-# url = "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.options.html#optionProductId=8875&tradeDate=06%2F01%2F2025"
 url_base = "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.options.html"
 
 options = webdriver.ChromeOptions()
@@ -21,7 +25,6 @@ options.add_experimental_option("detach", False)
 # options.add_argument("disable-gui")
 
 driver = webdriver.Chrome(options=options)
-# driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
 DAYS_BACK = 90
 dates = []
@@ -45,16 +48,26 @@ puts_low = []
 puts_high = []
 puts_prior_day_oi = [] # open interest
 puts_estimated_volume = []
+dfs = []
 
-for d in range(DAYS_BACK + 1):
-    td = timedelta(days=d)
-    loadDate -= td
+# get date list
+driver.get(url_base)
+ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
+labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
+DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
+
+# for d in range(DAYS_BACK + 1):
+for i_date, loadDate in enumerate(DateChoices):
 
     dd = f'{loadDate.day:02d}'
     mm = f'{loadDate.month:02d}'
     yyyy = f'{loadDate.year:04d}'
     url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
     driver.get(url_date)
+    if i_date != 0:
+        driver.refresh()
+    
 
     # first load to get option type choices
     ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
@@ -66,6 +79,7 @@ for d in range(DAYS_BACK + 1):
     for i_type, typeChoiceID in enumerate(typeChoiceIDs):
         url_date_type = url_date + f'&optionProductId={typeChoiceID}'
         driver.get(url_date_type)
+        driver.refresh()
 #
         # second load to get expiry choices
         ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
@@ -77,6 +91,7 @@ for d in range(DAYS_BACK + 1):
         for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
             url_date_type_expiry = url_date_type + f'&optionExpiration={expiryChoiceID}'
             driver.get(url_date_type_expiry)
+            driver.refresh()
             # if i_exp != 0:
             #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
             #     expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
@@ -110,15 +125,7 @@ for d in range(DAYS_BACK + 1):
                     Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
                 );
                 """)
-            # ret = driver.find_element(By.CLASS_NAME, "main-table-wrapper")
-
-            # table = ret.find_element(By.TAG_NAME, "table")
-            # tbody = table.find_element(By.TAG_NAME, "tbody")
-            # trs = tbody.find_elements(By.TAG_NAME, "tr")
-            # for tr in tqdm(trs):
             for tds in trs:
-                # tds = tr.find_elements(By.TAG_NAME, "td")
-
                 dates.append(loadDate.isoformat())
                 optionTypes.append(typeChoices[i_type])
                 expiries.append(expiryChoices[i_exp])
@@ -144,28 +151,37 @@ for d in range(DAYS_BACK + 1):
                 puts_low.append(put_low)
                 puts_prior_day_oi.append(tds[11])
                 puts_estimated_volume.append(tds[12])
-                # calls_estimated_volume.append(tds[0].text)
-                # calls_prior_day_oi.append(tds[1].text)
-                # call_high, call_low = tds[2].text.split('\n')
-                # calls_high.append(call_high)
-                # calls_low.append(call_low)
-                # call_open, call_last = tds[3].text.split('\n')
-                # calls_open.append(call_open)
-                # calls_last.append(call_last)
-                # calls_settle.append(tds[4].text)
-                # calls_change.append(tds[5].text)
-                # strikes.append(tds[6].text)
-                # puts_change.append(tds[7].text)
-                # puts_settle.append(tds[8].text)
-                # put_open, put_last = tds[9].text.split('\n')
-                # puts_open.append(put_open)
-                # puts_last.append(put_last)
-                # put_high, put_low = tds[10].text.split('\n')
-                # puts_high.append(put_high)
-                # puts_low.append(put_low)
-                # puts_prior_day_oi.append(tds[11].text)
-                # puts_estimated_volume.append(tds[12].text)
+
+                # dfs.append(pd.DataFrame(dic))
             print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
-    print("Finished for " + str(loadDate))
+            time.sleep(2.0) # to avoid being blocked by server
+    print("Finished for " + str(loadDate)) 
+
+# export to file
+dic = {
+    "Date": dates,
+    "OptionType": optionTypes,
+    "Expiry": expiries,
+    "Strike": strikes,
+    "OpenCallPrice": calls_open,
+    "HighCallPrice": calls_high,
+    "LowCallPrice": calls_low,
+    "LastCallPrice": calls_last,
+    "SettleCallPrice": calls_settle,
+    "SettleCallPriceChange": calls_change,
+    "CallPriorDayOpenInterest": calls_prior_day_oi,
+    "CallEstimatedVolume": calls_estimated_volume,
+    "OpenPutPrice": puts_open,
+    "HighPutPrice": puts_high,
+    "LowPutPrice": puts_low,
+    "LastPutPrice": puts_last,
+    "SettlePutPrice": puts_settle,
+    "SettlePutPriceChange": puts_change,
+    "PutPriorDayOpenInterest": puts_prior_day_oi,
+    "PutEstimatedVolume": puts_estimated_volume,
+    }
+df = pd.DataFrame(dic)
+os.makedirs("./data", exist_ok=True)
+df.to_excel("./data/" + OUTPUT_FILE, index=False)
 
 print("Finished all")
