@@ -4,15 +4,10 @@ import pandas as pd
 import os
 import time
 import openpyxl
+from utils import datetimeToTimestamp, timestampToDatetime
 
 OUTPUT_DATA_DIR = "./data"
 os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
-
-def timestampToDatetime(timestamp_ms):
-    return datetime.fromtimestamp(timestamp_ms / 1000)
-
-def datetimeToTimestamp(dt):
-    return int(dt.timestamp() * 1000)
 
 # --- Fetch all BTC option instruments (include expired) ---
 print("Loading instrument metadata...")
