@@ -11,8 +11,9 @@ from tqdm import tqdm
 import time
 import os
 import pandas as pd
+
 import json
-from utils import datetimeToTimestamp, timestampToDatetime
+from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
 
 loadDate = dt.now()
 OUTPUT_FILE = "CME_BTC_Future_" + loadDate.isoformat() + ".xlsx"
