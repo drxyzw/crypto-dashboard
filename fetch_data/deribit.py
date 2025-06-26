@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import time
 import openpyxl
-from utils import datetimeToTimestamp, timestampToDatetime
+from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
 
 OUTPUT_DATA_DIR = "./data"
 os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
