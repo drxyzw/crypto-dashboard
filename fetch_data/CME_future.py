@@ -29,8 +29,6 @@ if os.path.exists(latest_full_path):
 loadDate = dt.now().isoformat().replace(":", "")
 loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
 OUTPUT_FILE = "CME_BTC_Future_" + loadDate + ".xlsx"
-OUTPUT_FILE = OUTPUT_FILE.replace(":", "")
-
 
 keepOpen = True
 
