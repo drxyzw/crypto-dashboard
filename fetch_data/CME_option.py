@@ -75,132 +75,136 @@ DateChoices.sort() # sort by ascending order
 # extract only new dates (not included in file)
 DateChoices = [dc for dc in DateChoices if dc not in existing_dates]
 
-for i_date, evalDate in enumerate(DateChoices):
-    dd = f'{evalDate.day:02d}'
-    mm = f'{evalDate.month:02d}'
-    yyyy = f'{evalDate.year:04d}'
-    url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
-    driver.get(url_date)
-    if i_date != 0:
-        driver.refresh()
-    
-
-    # first load to get option type choices
-    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-    labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
-    typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-    typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
-    typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
-
-    for i_type, typeChoiceID in enumerate(typeChoiceIDs):
-        url_date_type = url_date + f'&optionProductId={typeChoiceID}'
-        driver.get(url_date_type)
-        driver.refresh()
-#
-        # second load to get expiry choices
-        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-        labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
-        expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-        expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
-        expiryChoiceIDs = [item.get_attribute("data-value").strip() for item in expiryItems]
-
-        for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
-            url_date_type_expiry = url_date_type + f'&optionExpiration={expiryChoiceID}'
-            driver.get(url_date_type_expiry)
+if len(DateChoices) > 0:
+    for i_date, evalDate in enumerate(DateChoices):
+        dd = f'{evalDate.day:02d}'
+        mm = f'{evalDate.month:02d}'
+        yyyy = f'{evalDate.year:04d}'
+        url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
+        driver.get(url_date)
+        if i_date != 0:
             driver.refresh()
-            # if i_exp != 0:
-            #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
-            #     expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-            #     expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
-            # driver.execute_script("arguments[0].click();", expiryItems[i_exp])
 
+
+        # first load to get option type choices
+        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+        labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
+        typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+        typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
+        typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
+
+        for i_type, typeChoiceID in enumerate(typeChoiceIDs):
+            url_date_type = url_date + f'&optionProductId={typeChoiceID}'
+            driver.get(url_date_type)
+            driver.refresh()
+    #
+            # second load to get expiry choices
             ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-            n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
-            # textBeforeLoadAll = ret.text
-            # textBeforeLoadAll = ret.text
-            loadAllButtons = driver.find_elements(By.CSS_SELECTOR, ".primary.load-all.btn.btn-")
-            if loadAllButtons:
-                loadAllButton = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".primary.load-all.btn.btn-")))
-                # loadAllButton.click() fails due to overlay issue
-                driver.execute_script("arguments[0].click();", loadAllButton)
-                # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-                # WebDriverWait(driver, 20).until(lambda x: ret.text != textBeforeLoadAll)
-                def isNumTrTableChange(dr):
-                    r = dr.find_elements(By.CLASS_NAME, "main-table-wrapper")
-                    if len(r) > 0:
-                        n_tr_table_after_load_all = len(r[0].find_elements(By.TAG_NAME, "tr"))
-                        return n_tr_table_after_load_all > n_tr_table_before_load_all
-                    else:
-                        return False
-                # WebDriverWait(driver, 20).until(lambda dr: len(dr.find_element(By.CLASS_NAME, "main-table-wrapper").text) > len(textBeforeLoadAll))
-                WebDriverWait(driver, 20).until(isNumTrTableChange)
-            trs = driver.execute_script(
-                """
-                const rows = document.querySelectorAll(".main-table-wrapper table tbody tr");
-                return Array.from(rows).map(row =>
-                    Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
-                );
-                """)
-            for tds in trs:
-                dates.append(evalDate.isoformat())
-                optionTypes.append(typeChoices[i_type])
-                expiries.append(expiryChoices[i_exp])
+            labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
+            expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+            expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
+            expiryChoiceIDs = [item.get_attribute("data-value").strip() for item in expiryItems]
 
-                calls_estimated_volume.append(tds[0])
-                calls_prior_day_oi.append(tds[1])
-                call_high, call_low = tds[2].split('\n')
-                calls_high.append(call_high)
-                calls_low.append(call_low)
-                call_open, call_last = tds[3].split('\n')
-                calls_open.append(call_open)
-                calls_last.append(call_last)
-                calls_settle.append(tds[4])
-                calls_change.append(tds[5])
-                strikes.append(tds[6])
-                puts_change.append(tds[7])
-                puts_settle.append(tds[8])
-                put_open, put_last = tds[9].split('\n')
-                puts_open.append(put_open)
-                puts_last.append(put_last)
-                put_high, put_low = tds[10].split('\n')
-                puts_high.append(put_high)
-                puts_low.append(put_low)
-                puts_prior_day_oi.append(tds[11])
-                puts_estimated_volume.append(tds[12])
+            for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
+                url_date_type_expiry = url_date_type + f'&optionExpiration={expiryChoiceID}'
+                driver.get(url_date_type_expiry)
+                driver.refresh()
+                # if i_exp != 0:
+                #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
+                #     expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+                #     expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
+                # driver.execute_script("arguments[0].click();", expiryItems[i_exp])
 
-                # dfs.append(pd.DataFrame(dic))
-            print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
-            time.sleep(2.0) # to avoid being blocked by server
-    print("Finished for " + str(evalDate)) 
+                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
+                # textBeforeLoadAll = ret.text
+                # textBeforeLoadAll = ret.text
+                loadAllButtons = driver.find_elements(By.CSS_SELECTOR, ".primary.load-all.btn.btn-")
+                if loadAllButtons:
+                    loadAllButton = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".primary.load-all.btn.btn-")))
+                    # loadAllButton.click() fails due to overlay issue
+                    driver.execute_script("arguments[0].click();", loadAllButton)
+                    # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                    # WebDriverWait(driver, 20).until(lambda x: ret.text != textBeforeLoadAll)
+                    def isNumTrTableChange(dr):
+                        r = dr.find_elements(By.CLASS_NAME, "main-table-wrapper")
+                        if len(r) > 0:
+                            n_tr_table_after_load_all = len(r[0].find_elements(By.TAG_NAME, "tr"))
+                            return n_tr_table_after_load_all > n_tr_table_before_load_all
+                        else:
+                            return False
+                    # WebDriverWait(driver, 20).until(lambda dr: len(dr.find_element(By.CLASS_NAME, "main-table-wrapper").text) > len(textBeforeLoadAll))
+                    WebDriverWait(driver, 20).until(isNumTrTableChange)
+                trs = driver.execute_script(
+                    """
+                    const rows = document.querySelectorAll(".main-table-wrapper table tbody tr");
+                    return Array.from(rows).map(row =>
+                        Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
+                    );
+                    """)
+                for tds in trs:
+                    dates.append(evalDate.isoformat())
+                    optionTypes.append(typeChoices[i_type])
+                    expiries.append(expiryChoices[i_exp])
 
-# export to file
-dic = {
-    "Date": dates,
-    "OptionType": optionTypes,
-    "Expiry": expiries,
-    "Strike": strikes,
-    "OpenCallPrice": calls_open,
-    "HighCallPrice": calls_high,
-    "LowCallPrice": calls_low,
-    "LastCallPrice": calls_last,
-    "SettleCallPrice": calls_settle,
-    "SettleCallPriceChange": calls_change,
-    "CallPriorDayOpenInterest": calls_prior_day_oi,
-    "CallEstimatedVolume": calls_estimated_volume,
-    "OpenPutPrice": puts_open,
-    "HighPutPrice": puts_high,
-    "LowPutPrice": puts_low,
-    "LastPutPrice": puts_last,
-    "SettlePutPrice": puts_settle,
-    "SettlePutPriceChange": puts_change,
-    "PutPriorDayOpenInterest": puts_prior_day_oi,
-    "PutEstimatedVolume": puts_estimated_volume,
-    }
-dfs.append(pd.DataFrame(dic))
-df = pd.concat(dfs)
-os.makedirs(DIR, exist_ok=True)
-df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
+                    calls_estimated_volume.append(tds[0])
+                    calls_prior_day_oi.append(tds[1])
+                    call_high, call_low = tds[2].split('\n')
+                    calls_high.append(call_high)
+                    calls_low.append(call_low)
+                    call_open, call_last = tds[3].split('\n')
+                    calls_open.append(call_open)
+                    calls_last.append(call_last)
+                    calls_settle.append(tds[4])
+                    calls_change.append(tds[5])
+                    strikes.append(tds[6])
+                    puts_change.append(tds[7])
+                    puts_settle.append(tds[8])
+                    put_open, put_last = tds[9].split('\n')
+                    puts_open.append(put_open)
+                    puts_last.append(put_last)
+                    put_high, put_low = tds[10].split('\n')
+                    puts_high.append(put_high)
+                    puts_low.append(put_low)
+                    puts_prior_day_oi.append(tds[11])
+                    puts_estimated_volume.append(tds[12])
 
-shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)
+                    # dfs.append(pd.DataFrame(dic))
+                print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
+                time.sleep(2.0) # to avoid being blocked by server
+        print("Finished for " + str(evalDate)) 
 
-print("Finished all")
+    # export to file
+    dic = {
+        "Date": dates,
+        "OptionType": optionTypes,
+        "Expiry": expiries,
+        "Strike": strikes,
+        "OpenCallPrice": calls_open,
+        "HighCallPrice": calls_high,
+        "LowCallPrice": calls_low,
+        "LastCallPrice": calls_last,
+        "SettleCallPrice": calls_settle,
+        "SettleCallPriceChange": calls_change,
+        "CallPriorDayOpenInterest": calls_prior_day_oi,
+        "CallEstimatedVolume": calls_estimated_volume,
+        "OpenPutPrice": puts_open,
+        "HighPutPrice": puts_high,
+        "LowPutPrice": puts_low,
+        "LastPutPrice": puts_last,
+        "SettlePutPrice": puts_settle,
+        "SettlePutPriceChange": puts_change,
+        "PutPriorDayOpenInterest": puts_prior_day_oi,
+        "PutEstimatedVolume": puts_estimated_volume,
+        }
+    dfs.append(pd.DataFrame(dic))
+    df = pd.concat(dfs)
+    os.makedirs(DIR, exist_ok=True)
+    df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
+
+    shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)
+
+    print("Finished all")
+
+else:
+    print("Skipped due to no update on website.")
