@@ -4,7 +4,6 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from tqdm import tqdm
 import time
 import os
 import shutil
@@ -62,52 +61,54 @@ puts_low = []
 puts_high = []
 puts_prior_day_oi = [] # open interest
 puts_estimated_volume = []
+counts = []
+count = 0
 dfs = [] if df_latest is None else [df_latest]
 
+# In options, dates are given per expiry (no date is shown after expiry)
+# So, first select by expiry. Then, select date.
 # get date list
 driver.get(url_base)
-ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
-labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
-DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
-DateChoices.sort() # sort by ascending order
 
-# extract only new dates (not included in file)
-DateChoices = [dc for dc in DateChoices if dc not in existing_dates]
+# first load to get option type choices
+ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
+typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
+typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
 
-if len(DateChoices) > 0:
-    for i_date, evalDate in enumerate(DateChoices):
-        dd = f'{evalDate.day:02d}'
-        mm = f'{evalDate.month:02d}'
-        yyyy = f'{evalDate.year:04d}'
-        url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
-        driver.get(url_date)
-        if i_date != 0:
-            driver.refresh()
+for i_type, typeChoiceID in enumerate(typeChoiceIDs):
+    url_type = url_base + f'#optionProductId={typeChoiceID}'
+    driver.get(url_type)
+    if i_type != 0:
+        driver.refresh()
+    # second load to get expiry choices
+    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+    labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
+    expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+    expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
+    expiryChoiceIDs = [item.get_attribute("data-value").strip() for item in expiryItems]
+    for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
+        url_type_expiry = url_type + f'&optionExpiration={expiryChoiceID}'
+        driver.get(url_type_expiry)
+        driver.refresh()
 
+        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
+        labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
+        DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+        DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
+        DateChoices.sort() # sort by ascending order
 
-        # first load to get option type choices
-        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-        labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
-        typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-        typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
-        typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
+        # extract only new dates (not included in file)
+        DateChoices = [dc for dc in DateChoices if dc not in existing_dates]
 
-        for i_type, typeChoiceID in enumerate(typeChoiceIDs):
-            url_date_type = url_date + f'&optionProductId={typeChoiceID}'
-            driver.get(url_date_type)
-            driver.refresh()
-    #
-            # second load to get expiry choices
-            ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-            labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
-            expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-            expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
-            expiryChoiceIDs = [item.get_attribute("data-value").strip() for item in expiryItems]
-
-            for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
-                url_date_type_expiry = url_date_type + f'&optionExpiration={expiryChoiceID}'
-                driver.get(url_date_type_expiry)
+        if len(DateChoices) > 0:
+            for i_date, evalDate in enumerate(DateChoices):
+                dd = f'{evalDate.day:02d}'
+                mm = f'{evalDate.month:02d}'
+                yyyy = f'{evalDate.year:04d}'
+                url_type_expiry_date = url_type_expiry + f'&tradeDate={dd}%2F{mm}%2F{yyyy}'
+                driver.get(url_type_expiry_date)
                 driver.refresh()
                 # if i_exp != 0:
                 #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
@@ -143,7 +144,7 @@ if len(DateChoices) > 0:
                     );
                     """)
                 for tds in trs:
-                    dates.append(evalDate.isoformat())
+                    dates.append(dt.strftime(evalDate, "%Y-%m-%d"))
                     optionTypes.append(typeChoices[i_type])
                     expiries.append(expiryChoices[i_exp])
 
@@ -168,14 +169,19 @@ if len(DateChoices) > 0:
                     puts_low.append(put_low)
                     puts_prior_day_oi.append(tds[11])
                     puts_estimated_volume.append(tds[12])
+                    counts.append(count)
+                    count += 1
 
                     # dfs.append(pd.DataFrame(dic))
-                print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
+                print("Finished for " + typeChoices[i_type] + ", " + expiryChoices[i_exp] + ", expiry date:" + str(evalDate))
                 time.sleep(2.0) # to avoid being blocked by server
-        print("Finished for " + str(evalDate)) 
+        else:
+            print("Skipped due to no update on website for " + typeChoices[i_type] + ", " + expiryChoices[i_exp])
 
+if len(counts) > 0:
     # export to file
     dic = {
+        "Count": counts,
         "Date": dates,
         "OptionType": optionTypes,
         "Expiry": expiries,
@@ -197,7 +203,10 @@ if len(DateChoices) > 0:
         "PutPriorDayOpenInterest": puts_prior_day_oi,
         "PutEstimatedVolume": puts_estimated_volume,
         }
-    dfs.append(pd.DataFrame(dic))
+    df_new = pd.DataFrame(dic)
+    df_new = df_new.sort_values(by=['Date', 'Count'], ascending=[True, True])
+    df_new_removed_count = df_new.drop(columns='Count')
+    dfs.append(df_new_removed_count)
     df = pd.concat(dfs)
     os.makedirs(DIR, exist_ok=True)
     df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
