@@ -2,13 +2,9 @@ from datetime import datetime as dt
 from datetime import timedelta
 from selenium import webdriver
 # from seleniumwire import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from tqdm import tqdm
-import time
 import os
 import pandas as pd
 import shutil
@@ -70,6 +66,7 @@ for indexName, url in url_dict.items():
 
 new_df = pd.concat(new_dfs, axis=1)
 new_df['Date'] = pd.to_datetime(new_df.Date)
+new_df['Date'] = new_df['Date'].map(lambda x: dt.strftime(x, "%Y-%m-%d")) # correct date format
 new_df = new_df[~new_df.Date.isin(existing_dates)] # remove dates which already exists in previous latest data
 
 if len(new_df) > 0:
