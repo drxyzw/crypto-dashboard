@@ -18,7 +18,8 @@ df_latest = None
 if os.path.exists(latest_full_path):
     df_latest = pd.read_excel(latest_full_path)
     existing_dates_str = df_latest["Date"]
-    existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%dT%H:%M:%S").unique()
+    existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%d").unique()
+    # existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%dT%H:%M:%S").unique()
 
 loadDate = dt.now().isoformat().replace(":", "")
 loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
