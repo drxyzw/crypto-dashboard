@@ -1,7 +1,5 @@
 from datetime import datetime as dt
-from datetime import timedelta
 from selenium import webdriver
-# from seleniumwire import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -36,9 +34,6 @@ url_dict = {
 
 options = webdriver.ChromeOptions()
 options.add_experimental_option("detach", False)
-# options.add_argument("headless")
-# options.add_argument("disable-gui")
-
 driver = webdriver.Chrome(options=options)
 
 result_dfs = [] if df_latest is None else [df_latest]
