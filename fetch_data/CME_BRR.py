@@ -10,7 +10,7 @@ import shutil
 import json
 from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
 
-DIR = "./data"
+DIR = "./raw_data"
 LATEST_FILE = "CME_BRR_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []

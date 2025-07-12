@@ -17,7 +17,7 @@ from io import StringIO
 # 3. Export #1 and #2 to OUTPUT file with file name the latest timestamp
 # 4. Copy #4 to overwrite the latest file
 
-DIR = "./data"
+DIR = "./raw_data"
 LATEST_FILE = "CME_SOFR_OIS_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []

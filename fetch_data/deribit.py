@@ -6,7 +6,7 @@ import time
 import openpyxl
 from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
 
-OUTPUT_DATA_DIR = "./data"
+OUTPUT_DATA_DIR = "./raw_data"
 os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
 
 # --- Fetch all BTC option instruments (include expired) ---

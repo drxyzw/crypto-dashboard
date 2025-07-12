@@ -50,7 +50,7 @@ month_flag_dict = [
 ]
 
 
-DIR = "./data"
+DIR = "./raw_data"
 LATEST_FILE = "SOFR_futures_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []
