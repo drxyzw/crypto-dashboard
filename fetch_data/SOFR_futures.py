@@ -69,7 +69,7 @@ options = webdriver.ChromeOptions()
 options.add_experimental_option("detach", False)
 driver = webdriver.Chrome(options=options)
 
-dfs = [] if df_latest == None else [df_latest]
+dfs = [] if df_latest is None else [df_latest]
 count = 0
 counts = []
 closes = []
@@ -175,7 +175,7 @@ for instrument_flag in instrument_flags:
                 df.rename(columns={'Time': 'Date'}, inplace=True)
                 df.sort_values(by='Date', ascending=True, inplace=True)
                 latest_date = None
-                if df_latest:
+                if df_latest is None:
                     df_ticker = df_latest[df_latest.Ticker == ticker]
                     if not df_ticker.empty:
                         latest_date = df_ticker['Date'].max()
