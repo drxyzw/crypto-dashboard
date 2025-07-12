@@ -30,8 +30,6 @@ loadDate = dt.now().isoformat().replace(":", "")
 loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
 OUTPUT_FILE = "CME_BTC_Option_" + loadDate + ".xlsx"
 
-keepOpen = True
-
 url_base = "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.options.html"
 
 options = webdriver.ChromeOptions()

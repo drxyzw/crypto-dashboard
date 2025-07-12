@@ -25,8 +25,6 @@ loadDate = dt.now().isoformat().replace(":", "")
 loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
 OUTPUT_FILE = "CME_BRR_" + loadDate + ".xlsx"
 
-keepOpen = True
-
 url_dict = {
     "BRR": "https://www.cfbenchmarks.com/data/indices/BRR",
     "BRRNY": "https://www.cfbenchmarks.com/data/indices/BRRNY",
