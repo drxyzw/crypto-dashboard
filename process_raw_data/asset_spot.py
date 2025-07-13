@@ -1,6 +1,5 @@
 import pandas as pd
 from datetime import datetime as dt
-import numpy as np
 import os
 
 from utils.config import *
