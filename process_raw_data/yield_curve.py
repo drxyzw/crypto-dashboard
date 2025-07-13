@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime as dt
 import numpy as np
+import os
 
 from utils.config import *
 from utils.calendar import *
@@ -24,8 +25,8 @@ def prepare_SOFR_market(marketDate):
     sofr_ois_raw['Date'] = pd.to_datetime(sofr_ois_raw['Date'])
 
     # df for config sheet
-    df_config = pd.DataFrame({"Name": ["Date", "CCY", "Name"],
-                              "Value": [marketDateStr, "USD", "USD.SOFR.CSA_USD"]})
+    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name"],
+                              "Value": [marketDateStr, "Markte", "YieldCurve", "USD", "USD.SOFR.CSA_USD"]})
 
     # df for data part
     df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])
@@ -68,7 +69,9 @@ def prepare_SOFR_market(marketDate):
     PROCESSED_FILE = f"USDSOFRCSA_USD_{marketDateStrNoHyphen}.xlsx"
     if len(dfs_data):
         df_data = pd.concat(dfs_data)
-        with pd.ExcelWriter(PROCESSED_DIR + "./" + PROCESSED_FILE) as ew:
+        directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
+        os.makedirs(directory, exist_ok=True)
+        with pd.ExcelWriter(directory + "/" + PROCESSED_FILE) as ew:
             df_config.to_excel(ew, sheet_name="Config", index=False)
             df_data.to_excel(ew, sheet_name="Data", index=False)
 
@@ -78,7 +81,7 @@ def prepare_SOFR_market(marketDate):
 
 
 if __name__ == "__main__":
-    # marketDate = dt(2025, 6, 13)
-    # prepare_SOFR_market(marketDate)
-    marketDate = dt(2025, 7, 6)
-    prepare_SOFR_market(marketDate)
+    marketDate = dt(2025, 6, 13)
+    while marketDate < dt.now():
+        prepare_SOFR_market(marketDate)
+        marketDate += relativedelta(days=1)
