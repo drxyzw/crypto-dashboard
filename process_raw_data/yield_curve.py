@@ -65,9 +65,9 @@ def prepare_SOFR_market(marketDate):
         df_ois_export = df_ois[['Tenor', 'Ticker', 'Type', 'Rate']]
         dfs_data.append(df_ois_export)
 
-    df_data = pd.concat(dfs_data)
     PROCESSED_FILE = f"USDSOFRCSA_USD_{marketDateStrNoHyphen}.xlsx"
-    if not df_data.empty:
+    if len(dfs_data):
+        df_data = pd.concat(dfs_data)
         with pd.ExcelWriter(PROCESSED_DIR + "./" + PROCESSED_FILE) as ew:
             df_config.to_excel(ew, sheet_name="Config", index=False)
             df_data.to_excel(ew, sheet_name="Data", index=False)
@@ -80,5 +80,5 @@ def prepare_SOFR_market(marketDate):
 if __name__ == "__main__":
     # marketDate = dt(2025, 6, 13)
     # prepare_SOFR_market(marketDate)
-    marketDate = dt(2025, 7, 8)
+    marketDate = dt(2025, 7, 6)
     prepare_SOFR_market(marketDate)
