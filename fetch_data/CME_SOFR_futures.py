@@ -11,6 +11,8 @@ import requests
 from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
 
+from utils.config import *
+
 def scroll_to_load_all(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
@@ -22,35 +24,9 @@ def scroll_to_load_all(driver):
             break
         last_height = new_height
         
-instrument_flags = [
-    "SL", # 1-month SOFR futures
-    "SQ", # 3-month SOFR futures
-    ]
-expiry_months = {
-    "SL": 1,
-    "SQ": 3,
-}
-expiry_year_limits = {
-    "SL": 1,
-    "SQ": 3,
-}
-month_flag_dict = [
-    "F", # Jan
-    "G", # Feb
-    "H", # Mar
-    "J", # Apr
-    "K", # May
-    "M", # Jun
-    "N", # Jul
-    "Q", # Aug
-    "U", # Sep
-    "V", # Oct
-    "X", # Nov
-    "Z", # Dec
-]
 
 
-DIR = "./raw_data"
+DIR = "./data_raw"
 LATEST_FILE = "SOFR_futures_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []
@@ -92,7 +68,7 @@ for instrument_flag in instrument_flags:
         year = expiryDate.year
         year_flag = str(year % 100)
         month = expiryDate.month
-        month_flag = month_flag_dict[month - 1]
+        month_flag = month_flag_dict[month]
         ticker = instrument_flag + month_flag + year_flag
 
         url = f"https://www.barchart.com/futures/quotes/{ticker}/price-history/historical"
@@ -175,11 +151,11 @@ for instrument_flag in instrument_flags:
                 df.rename(columns={'Time': 'Date'}, inplace=True)
                 df.sort_values(by='Date', ascending=True, inplace=True)
                 latest_date = None
-                if df_latest is None:
+                if not df_latest is None:
                     df_ticker = df_latest[df_latest.Ticker == ticker]
                     if not df_ticker.empty:
                         latest_date = df_ticker['Date'].max()
-                if latest_date != None:
+                if not latest_date is None:
                     df = df[df.Date > latest_date]
                 # convert "unch" to 0 in Change and %Chg columns
                 df['Change'] = df["Change"].map(lambda x: 0.0 if x == "unch" else float(x) if x.isdigit() else x)
@@ -197,6 +173,7 @@ for instrument_flag in instrument_flags:
 
 result_df = pd.concat(dfs, axis=0)
 if len(df) > 0:
+    result_df = result_df.drop_duplicates(columns = ['Ticker', 'Date'])
     result_df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
 
     shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)

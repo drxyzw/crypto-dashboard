@@ -17,8 +17,8 @@ from io import StringIO
 # 3. Export #1 and #2 to OUTPUT file with file name the latest timestamp
 # 4. Copy #4 to overwrite the latest file
 
-DIR = "./raw_data"
-LATEST_FILE = "CME_SOFR_OIS_latest.xlsx"
+DIR = "./data_raw"
+LATEST_FILE = "SOFR_OIS_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []
 df_latest = None
@@ -30,7 +30,7 @@ if os.path.exists(latest_full_path):
 
 loadDate = dt.now().isoformat().replace(":", "")
 loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
-OUTPUT_FILE = "CME_SOFR_OIS_" + loadDate + ".xlsx"
+OUTPUT_FILE = "SOFR_OIS_" + loadDate + ".xlsx"
 
 url = "https://www.cmegroup.com/trading/interest-rates/cleared-otc-sofr-swaps.html"
 
