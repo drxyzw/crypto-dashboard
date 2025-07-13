@@ -2,19 +2,26 @@ import pandas as pd
 from datetime import datetime as dt
 import numpy as np
 import os
+from joblib import Memory
 
 from utils.config import *
 from utils.calendar import *
 from utils.convention import *
 
+memory = Memory(location='./.joblib_cache', verbose=0)
+
 RAW_DIR = "./data_raw"
 BTC_OPTION_FILE = RAW_DIR + "/CME_BTC_option_latest.xlsx"
 PROCESSED_DIR = "./data_processed"
 
+@memory.cache
+def load_excel_with_cache(file_path):
+    return pd.read_excel(file_path)
+
 def prepare_BTCUSD_options(marketDate):
     marketDateStr = marketDate.strftime("%Y-%m-%d")
     marketDateStrNoHyphen = marketDate.strftime("%Y%m%d")
-    BTC_OPTIONS_raw = pd.read_excel(BTC_OPTION_FILE)
+    BTC_OPTIONS_raw = load_excel_with_cache(BTC_OPTION_FILE)
 
     BTC_OPTIONS_raw['Date'] = pd.to_datetime(BTC_OPTIONS_raw['Date'])
 
@@ -59,7 +66,7 @@ def prepare_BTCUSD_options(marketDate):
         df_BTC_OPTIONS_melt = pd.melt(df_BTC_OPTIONS, id_vars=['Tenor', 'Strike'], value_vars=['SettleCallPrice', 'SettlePutPrice'], var_name="CallPut", value_name="Price")
         df_BTC_OPTIONS_melt.rename(columns={'CallPut': 'OptionType'}, inplace=True)
         df_BTC_OPTIONS_melt['OptionType'] = np.where(df_BTC_OPTIONS_melt['OptionType'] == "SettleCallPrice", "Call", "Put")
-        df_BTC_OPTIONS_melt['Price'] = df_BTC_OPTIONS_melt['Price'].map(lambda x: 0.0 if x == "CAB" else float(x))
+        df_BTC_OPTIONS_melt['Price'] = df_BTC_OPTIONS_melt['Price'].map(lambda x: 0.0 if x == "CAB" or x == "-" else float(x))
         df_data = df_BTC_OPTIONS_melt.copy()
     
     PROCESSED_FILE = f"BTCUSDOPTION_{marketDateStrNoHyphen}.xlsx"
