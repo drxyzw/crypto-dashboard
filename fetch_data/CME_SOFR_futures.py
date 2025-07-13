@@ -144,7 +144,7 @@ for instrument_flag in instrument_flags:
                 df = pd.DataFrame(records, columns=columns)
     
                 # Convert 'Time' column to datetime and search
-                df['Time'] = pd.to_datetime(df['Time'], format="%m/%d/%Y")
+                df['Time'] = pd.to_datetime(df['Time'].str.strip(), format="%m/%d/%Y")
                 earliestFetchedDate = pd.to_datetime(df["Time"].values[-1])
             
 
@@ -173,7 +173,7 @@ for instrument_flag in instrument_flags:
 
 result_df = pd.concat(dfs, axis=0)
 if len(df) > 0:
-    result_df = result_df.drop_duplicates(columns = ['Ticker', 'Date'])
+    result_df = result_df.drop_duplicates(['Ticker', 'Date'])
     result_df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
 
     shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)
