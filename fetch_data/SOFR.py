@@ -9,9 +9,9 @@ import shutil
 from io import StringIO
 
 import json
-from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
+from utils.config import datetimeToTimestamp, timestampToDatetime
 
-DIR = "./raw_data"
+DIR = "./data_raw"
 LATEST_FILE = "SOFR_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
 existing_dates = []

@@ -4,9 +4,9 @@ import pandas as pd
 import os
 import time
 import openpyxl
-from fetch_data.utils import datetimeToTimestamp, timestampToDatetime
+from utils.config import datetimeToTimestamp, timestampToDatetime
 
-OUTPUT_DATA_DIR = "./raw_data"
+OUTPUT_DATA_DIR = "./data_raw"
 os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
 
 # --- Fetch all BTC option instruments (include expired) ---
