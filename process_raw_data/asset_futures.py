@@ -38,7 +38,7 @@ def prepare_BTCUSD_futures(marketDate):
         year_str = "20" + expiry_str_strip[3:]
         month_str = expiry_str_strip[:3]
         month_number = month_name_flag__reverse_dict[month_str]
-        cal = ql.JointCalendar(USCalendar(), UKCalendar())
+        cal = UKorUSCalendar()
         ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
         ql_date = cal.adjust(ql_date, ql.Preceding)
         while ql_date.weekday() != ql.Friday:
