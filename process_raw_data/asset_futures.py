@@ -70,8 +70,6 @@ def prepare_BTCUSD_futures(marketDate):
 
 if __name__ == "__main__":
     marketDate = dt(2025, 6, 13)
-    prepare_BTCUSD_futures(marketDate)
-    # marketDate = dt(2025, 6, 13)
-    # while marketDate < dt.now():
-    #     prepare_BTCUSD_futures(marketDate)
-    #     marketDate += relativedelta(days=1)
+    while marketDate < dt.now():
+        prepare_BTCUSD_futures(marketDate)
+        marketDate += relativedelta(days=1)
