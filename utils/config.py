@@ -45,8 +45,18 @@ month_name_flag_dict = {
     11: "NOV", # Nov
     12: "DEC", # Dec
 }
-
 month_name_flag__reverse_dict = {v: k for k, v in month_name_flag_dict.items()}
+month_name_flag__reverse_dict["JUL"] = 7
+
+weekday_flag = {
+    "Sunday": 1,
+    "Monday": 2,
+    "Tuesday": 3,
+    "Wednesday": 4,
+    "Thursday": 5,
+    "Friday": 6,
+    "Saturday": 7,
+}
 
 def timestampToDatetime(timestamp_ms):
     return datetime.fromtimestamp(timestamp_ms / 1000)
