@@ -27,7 +27,7 @@ def nbMonths(tenorStr):
         raise ValueError(f"nbMonths function does not support a unit: {unit}")
 
 def SOFR_futures_reference_peiord(ticker):
-    periodMonths = expiry_months[ticker[:2]]
+    periodMonths = sofr_expiry_months[ticker[:2]]
     expiry_year = int("20" + ticker[-2:])
     month_flag_dict_reverse = {v: k for k, v in month_flag_dict.items()}
     expiry_month = month_flag_dict_reverse[ticker[2:3]]

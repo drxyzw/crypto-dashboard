@@ -1,18 +1,18 @@
 from datetime import datetime
 
-instrument_flags = [
+sofr_instrument_flags = [
     "SL", # 1-month SOFR futures
     "SQ", # 3-month SOFR futures
     ]
-expiry_months = {
+sofr_expiry_months = {
     "SL": 1,
     "SQ": 3,
 }
-expiry_year_limits = {
+sofr_expiry_year_limits = {
     "SL": 1,
     "SQ": 3,
 }
-futures_months_liquidity_limit = {
+sofr_futures_months_liquidity_limit = {
     "SL": 3,
     "SQ": 18,
 }
@@ -30,6 +30,23 @@ month_flag_dict = {
     11: "X", # Nov
     12: "Z", # Dec
 }
+
+month_name_flag_dict = {
+    1: "JAN", # Jan
+    2: "FEB", # Feb
+    3: "MAR", # Mar
+    4: "APR", # Apr
+    5: "MAR", # May
+    6: "JUN", # Jun
+    7: "JLY", # Jul
+    8: "AUG", # Aug
+    9: "SEP", # Sep
+    10: "OCT", # Oct
+    11: "NOV", # Nov
+    12: "DEC", # Dec
+}
+
+month_name_flag__reverse_dict = {v: k for k, v in month_name_flag_dict.items()}
 
 def timestampToDatetime(timestamp_ms):
     return datetime.fromtimestamp(timestamp_ms / 1000)
