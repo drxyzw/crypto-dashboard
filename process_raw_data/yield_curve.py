@@ -45,7 +45,7 @@ def prepare_SOFR_market(marketDate):
     if not df_futures.empty:
         df_futures['StartDate'] = df_futures["Ticker"].map(lambda x: SOFR_futures_reference_peiord(ticker=x)[0])
         df_futures['EndDate'] = df_futures["Ticker"].map(lambda x: SOFR_futures_reference_peiord(ticker=x)[1])
-        df_futures['liquidity_months_limit'] = df_futures["Ticker"].map(lambda x: futures_months_liquidity_limit[x[:2]])
+        df_futures['liquidity_months_limit'] = df_futures["Ticker"].map(lambda x: sofr_futures_months_liquidity_limit[x[:2]])
         df_futures['liquidity_date_limit'] = df_futures.apply(lambda x: dt(x['Date'].year, x['Date'].month, x['Date'].day) + relativedelta(months=x['liquidity_months_limit']), axis=1)
         df_futures['Include'] = (df_futures['Date'] < df_futures['StartDate']) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
         df_futures = df_futures[df_futures['Include']].reset_index(drop=True)

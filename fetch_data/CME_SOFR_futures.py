@@ -58,8 +58,8 @@ bufferWeeks = 2
 earliestDateNeeded = loadDate - relativedelta(months=fetchDataMonths) + relativedelta(weeks=bufferWeeks)
 
 # loop over future tenors
-for instrument_flag in instrument_flags:
-    expiryLimitDate = startDate + relativedelta(years=expiry_year_limits[instrument_flag])
+for instrument_flag in sofr_instrument_flags:
+    expiryLimitDate = startDate + relativedelta(years=sofr_expiry_year_limits[instrument_flag])
     month_count = 0
     expiryDate = startDate
     # loop over future expiry dates
