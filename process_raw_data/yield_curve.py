@@ -26,7 +26,7 @@ def prepare_SOFR_market(marketDate):
 
     # df for config sheet
     df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name"],
-                              "Value": [marketDateStr, "Markte", "YieldCurve", "USD", "USD.SOFR.CSA_USD"]})
+                              "Value": [marketDateStr, "Market", "YieldCurve", "USD", "USD.SOFR.CSA_USD"]})
 
     # df for data part
     df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])
