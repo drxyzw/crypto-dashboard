@@ -3,7 +3,7 @@ import QuantLib as ql
 from utils.calendar import *
 from utils.convention import *
 
-def create_rate_helper(row, cal, yc_raw, parsed_market_objects = None, days=0):
+def create_rate_helper(row, yc_raw, parsed_market_objects = None, days=0):
     marketDate = yc_raw['Date']
     marketDate = YYYYMMDDHyphenToQlDate(marketDate)
     rate_type = row['Type'].upper()
@@ -70,30 +70,7 @@ def parse_yield_curve(yc_raw, parsed_market_objects):
     data = yc_raw['Data']
     marketDate = YYYYMMDDHyphenToQlDate(yc_raw['Date'])
     ql.Settings.instance().evaluationDate = marketDate
-    if True or (not name.startswith("BTC")):
-        rateHelpers = data.apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects), axis=1)
-    else:
-        import pandas as pd
-        dayss = []
-        fwds = []
-        for days in range(245, 400):
-            dayss.append(days)
-            rateHelpers = data[:8].apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects), axis=1)
-            rateHelper = data[8:9].apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects, days=days), axis=1)
-            rateHelpers = pd.concat([rateHelpers, rateHelper])
-            yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
-            yc.enableExtrapolation()
-            yc_handler = ql.YieldTermStructureHandle(yc)
-            d=ql.Date(29,6,2026)
-            yd=parsed_market_objects['USD.SOFR.CSA_USD']
-            yf=yc_handler
-            spotObj = parsed_market_objects['BTCUSD.SPOT']
-            spot = spotObj.spotRate
-            fwd= spot*yf.discount(d)/yd.discount(d)
-            fwds.append(fwd)
-        df_debug = pd.DataFrame({"days": dayss, "fwd": fwds})
-        df_debug.to_excel("debug_fwd.xlsx")
-
+    rateHelpers = data.apply(lambda x: create_rate_helper(x, yc_raw, parsed_market_objects), axis=1)
     yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
     yc.enableExtrapolation()
     yc_handler = ql.YieldTermStructureHandle(yc)
