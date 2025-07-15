@@ -56,4 +56,12 @@ def parseToRelativeDelta(tenorStr):
         return relativedelta(years=nb)
     else:
         raise ValueError(f"nbMonths function does not support a unit: {unit}")
-    
+
+
+def YYYYMMDDHyphenToQlDate(YYYYMMDDHyphen):
+    year, month, day = map(int, YYYYMMDDHyphen.split('-'))
+    return ql.Date(day, month, year)
+
+def pyDateToQlDate(pyDate):
+    return ql.Date(pyDate.day, pyDate.month, pyDate.year)
+
