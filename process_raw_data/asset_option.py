@@ -26,8 +26,8 @@ def prepare_BTCUSD_options(marketDate):
     BTC_OPTIONS_raw['Date'] = pd.to_datetime(BTC_OPTIONS_raw['Date'])
 
     # df for config sheet
-    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "DomesticDiscountingCureve", "ForeignDiscountingCureve"],
-                              "Value": [marketDateStr, "Market", "Spot", "BTC", "BTCUSD.SPOT", "USD.SOFR.CSA_USD", "BTC.FUNDING.CSA_USD"]})
+    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "DomesticDiscountingCurve", "ForeignDiscountingCurve", "Underlying"],
+                              "Value": [marketDateStr, "Market", "Option", "BTC", "BTCUSD.OPTION", "USD.SOFR.CSA_USD", "BTC.FUNDING.CSA_USD", "Future"]})
 
     # df for data part
     df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])

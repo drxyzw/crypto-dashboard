@@ -18,7 +18,7 @@ def prepare_BTCUSD_spot(marketDate):
     BTC_SPOT_raw['Date'] = pd.to_datetime(BTC_SPOT_raw['Date'])
 
     # df for config sheet
-    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "DomesticDiscountingCureve", "ForeignDiscountingCureve"],
+    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "DomesticDiscountingCurve", "ForeignDiscountingCurve"],
                               "Value": [marketDateStr, "Market", "Spot", "BTC", "BTCUSD.SPOT", "USD.SOFR.CSA_USD", "BTC.FUNDING.CSA_USD"]})
 
     df_data = None
@@ -31,7 +31,7 @@ def prepare_BTCUSD_spot(marketDate):
                               "Value": [BTC_SPOT]})
     
     PROCESSED_FILE = f"BTCUSDSPOT_{marketDateStrNoHyphen}.xlsx"
-    if (not df_data is None) or (len(df_data)):
+    if (not df_data is None) and (len(df_data)):
         directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
         os.makedirs(directory, exist_ok=True)
         with pd.ExcelWriter(directory + "/" + PROCESSED_FILE) as ew:

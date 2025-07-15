@@ -36,7 +36,7 @@ def prepare_SOFR_market(marketDate):
     df_sofr = sofr_raw[sofr_raw['Date'] == marketDate]
     if not df_sofr.empty:
         sofr = df_sofr["Rate"].values[0]
-        df_sofr = pd.DataFrame([["ON", "SOFRRATE", "ONRATE", sofr]], columns=df_data.columns, )
+        df_sofr = pd.DataFrame([["ON", "SOFRRATE", "DEPOSIT", sofr]], columns=df_data.columns, )
         dfs_data.append(df_sofr)
     
     # process futures

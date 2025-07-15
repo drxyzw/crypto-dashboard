@@ -18,8 +18,8 @@ def prepare_BTCUSD_futures(marketDate):
     BTC_FUTURES_raw['Date'] = pd.to_datetime(BTC_FUTURES_raw['Date'])
 
     # df for config sheet
-    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "BaseDiscountingCureve"],
-                              "Value": [marketDateStr, "Market", "YieldCurve", "BTC", "BTC.FUNDING.CSA_USD", "USD.SOFR.CSA_USD"]})
+    df_config = pd.DataFrame({"Name": ["Date", "Type", "SubType", "CCY", "Name", "BaseDiscountingCurve", "Spot"],
+                              "Value": [marketDateStr, "Market", "YieldCurve", "BTC", "BTC.FUNDING.CSA_USD", "USD.SOFR.CSA_USD", "BTCUSD.SPOT"]})
 
     # df for data part
     df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])
@@ -51,7 +51,7 @@ def prepare_BTCUSD_futures(marketDate):
     if not df_BTC_FUTURES.empty:
         df_BTC_FUTURES['Ticker'] = df_BTC_FUTURES['Expiry'].map(processExpiryToTicker)
         df_BTC_FUTURES['Tenor'] = df_BTC_FUTURES['Expiry'].map(processExpiryToExpiryDate)
-        df_BTC_FUTURES['Type'] = "FUTURE"
+        df_BTC_FUTURES['Type'] = "FXFUTURE"
         df_BTC_FUTURES.rename(columns={'SettlePrice': 'Rate'}, inplace=True)
         df_data = df_BTC_FUTURES[['Tenor', 'Ticker', 'Type', 'Rate']]
     
