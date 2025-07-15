@@ -1,0 +1,115 @@
+import QuantLib as ql
+
+from utils.calendar import *
+from utils.convention import *
+
+def create_rate_helper(row, cal, yc_raw, parsed_market_objects = None, days=0):
+    marketDate = yc_raw['Date']
+    marketDate = YYYYMMDDHyphenToQlDate(marketDate)
+    rate_type = row['Type'].upper()
+    ticker = row['Ticker'].upper()
+    tenor = row['Tenor'].upper()
+    rate = row["Rate"]
+    if rate_type == "DEPOSIT":
+        if ticker == "SOFRRATE":
+            index = SOFR_index()
+        else:
+            raise ValueError(f"Unsupported ticker {ticker} for DEPOSIT rate helper")
+        helper = ql.DepositRateHelper(rate, index)
+    elif rate_type == "FUTURE":
+        if ticker.startswith("SL") or ticker.startswith("SQ") or ticker.startswith("SR"):
+            helper = SOFR_FUTURE_rate_helper(rate, ticker)
+        else:
+            raise ValueError(f"Unsupported ticker {ticker} for future rate helper")
+    elif rate_type == "OIS":
+        if ticker.startswith("SOFR"):
+            index = SOFR_index()
+            helper = ql.OISRateHelper(2, ql.Period(tenor), rate, index)
+        else:
+            raise ValueError(f"Unsupported ticker {ticker} for OIS rate helper")
+    elif rate_type == "FXFUTURE":
+        if ticker.startswith("BTC"):
+            settleLag = 0
+            maturityDate = YYYYMMDDHyphenToQlDate(tenor)
+            cal = UKorUSCalendar()
+            settlementDate = cal.advance(maturityDate, settleLag, ql.Days, ql.Following)
+            nbDays = cal.businessDaysBetween(marketDate, settlementDate)
+            # nbDays = settlementDate - marketDate
+            baseDiscountingCurveName = yc_raw['BaseDiscountingCurve'].upper()
+            baseDiscountingCurve = parsed_market_objects[baseDiscountingCurveName]
+            spotName = yc_raw['Spot'].upper()
+            spotObj = parsed_market_objects[spotName]
+            spotRate = spotObj.spotRate
+            forCcy = spotName[:3]
+            baseCcy = baseDiscountingCurveName.split(".")[0]
+            fwdPts = rate - spotRate
+            # df_base = baseDiscountingCurve.discount(settlementDate)
+            isFxBaseCurrencyCollateralCurrency = forCcy == baseCcy
+            if days == 0:
+                helper = ql.FxSwapRateHelper(
+                    ql.QuoteHandle(ql.SimpleQuote(fwdPts)), 
+                    # spotObj.spotQuote, ql.Period(settlementDate - marketDate), settleLag, cal, ql.Following, False, 
+                    spotObj.spotQuote, ql.Period(nbDays, ql.Days), settleLag, cal, ql.Following, False, 
+                    isFxBaseCurrencyCollateralCurrency, baseDiscountingCurve, cal)
+            else:
+                helper = ql.FxSwapRateHelper(
+                    ql.QuoteHandle(ql.SimpleQuote(fwdPts)), 
+                    spotObj.spotQuote, ql.Period(days, ql.Days), settleLag, cal, ql.Following, False, 
+                    isFxBaseCurrencyCollateralCurrency, baseDiscountingCurve, cal)
+        else:
+            raise ValueError(f"Unsupported ticker {ticker} for OIS rate helper")
+
+
+    return helper
+
+# https://stackoverflow.com/questions/78810877/sofr-swap-npv-and-cashflow-different-from-bbg-results-using-python-quantlib
+def parse_yield_curve(yc_raw, parsed_market_objects):
+    cal = USCalendar()
+    name = yc_raw['Name']
+    curve_type = name.split('.')[1].upper()
+    data = yc_raw['Data']
+    marketDate = YYYYMMDDHyphenToQlDate(yc_raw['Date'])
+    ql.Settings.instance().evaluationDate = marketDate
+    if True or (not name.startswith("BTC")):
+        rateHelpers = data.apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects), axis=1)
+    else:
+        import pandas as pd
+        dayss = []
+        fwds = []
+        for days in range(245, 400):
+            dayss.append(days)
+            rateHelpers = data[:8].apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects), axis=1)
+            rateHelper = data[8:9].apply(lambda x: create_rate_helper(x, cal, yc_raw, parsed_market_objects, days=days), axis=1)
+            rateHelpers = pd.concat([rateHelpers, rateHelper])
+            yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
+            yc.enableExtrapolation()
+            yc_handler = ql.YieldTermStructureHandle(yc)
+            d=ql.Date(29,6,2026)
+            yd=parsed_market_objects['USD.SOFR.CSA_USD']
+            yf=yc_handler
+            spotObj = parsed_market_objects['BTCUSD.SPOT']
+            spot = spotObj.spotRate
+            fwd= spot*yf.discount(d)/yd.discount(d)
+            fwds.append(fwd)
+        df_debug = pd.DataFrame({"days": dayss, "fwd": fwds})
+        df_debug.to_excel("debug_fwd.xlsx")
+
+    yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
+    yc.enableExtrapolation()
+    yc_handler = ql.YieldTermStructureHandle(yc)
+    return yc_handler
+
+def SOFR_index(yc = None):
+    if yc:
+        return ql.OvernightIndex("SOFR", 0, ql.USDCurrency(), USCalendar(), ql.Actual360(), yc)
+    else:
+        return ql.OvernightIndex("SOFR", 0, ql.USDCurrency(), USCalendar(), ql.Actual360())
+
+def SOFR_FUTURE_rate_helper(price, ticker, convexityAdjustment = 0.):
+    priceQuote = ql.QuoteHandle(ql.SimpleQuote(price))
+    convexQuote = ql.QuoteHandle(ql.SimpleQuote(convexityAdjustment))
+
+    startDate, maturityDate = SOFR_futures_reference_peiord(ticker)
+    periodMonths = sofr_expiry_months[ticker[:2]]
+    ave = ql.RateAveraging.Compound if periodMonths == 3 else ql.RateAveraging.Simple
+    return ql.OvernightIndexFutureRateHelper(priceQuote, pyDateToQlDate(startDate), pyDateToQlDate(maturityDate), SOFR_index(), convexQuote, ave)
