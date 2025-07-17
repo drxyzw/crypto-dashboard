@@ -4,7 +4,7 @@ from datetime import datetime as dt
 
 from utils.file import *
 from market.yield_curve.parse_yield_curve import *
-from market.assset.parse_spot import *
+from market.assset_index.parse_spot import *
 
 PROCESSED_DIR = "./data_processed"
 # DATE = "20250613"
