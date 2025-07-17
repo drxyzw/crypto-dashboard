@@ -65,3 +65,6 @@ def YYYYMMDDHyphenToQlDate(YYYYMMDDHyphen):
 def pyDateToQlDate(pyDate):
     return ql.Date(pyDate.day, pyDate.month, pyDate.year)
 
+def qlDateToPyDate(pyDate):
+    return dt(pyDate.year(), pyDate.month(), pyDate.dayOfMonth())
+
