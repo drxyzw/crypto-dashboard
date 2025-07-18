@@ -77,7 +77,7 @@ typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
 typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
 
 for i_type, typeChoiceID in enumerate(typeChoiceIDs):
-    url_type = url_base + f'#strikeRange=ALL&optionProductId={typeChoiceID}'
+    url_type = url_base + f'#optionProductId={typeChoiceID}'
     driver.get(url_type)
     if i_type != 0:
         driver.refresh()
