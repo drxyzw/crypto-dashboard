@@ -48,8 +48,12 @@ latest_date_str_test = str(year) + "/" + latest_mm_dd_str
 while dt.strptime(latest_date_str_test, "%Y/%m/%d") > dt.now():
     year -= 1
     latest_date_str_test = str(year) + "/" + latest_mm_dd_str
+
+# starting from latest rate date
 date_strs = df["Date"]
 dates = [dt.strptime(latest_date_str_test, "%Y/%m/%d")]
+
+# then process earlier date one by one
 for i in range(1, len(date_strs)):
     date_str_test = str(year) + "/" + date_strs[i]
     while dt.strptime(date_str_test, "%Y/%m/%d") > dates[-1]:
@@ -59,14 +63,20 @@ for i in range(1, len(date_strs)):
     dates.append(date_determined)
 df['Date'] = dates
 df.sort_values("Date", ascending=True, inplace=True)
+
+# exclude rate dates which have been already saved in file
 mask_to_include = [not (d in existing_dates) for d in df['Date']]
 df = df[mask_to_include]
+df['Date'] = df['Date'].map(lambda x: dt.strftime(x, "%Y-%m-%d"))
+df['Rate'] = df['RATE (%)'].map(lambda x: x/100.)
+df.rename(columns={"VOLUME ($Billions)": "Volume ($Billions)"}, inplace=True)
+df = df[["Date", "Rate", "Volume ($Billions)"]]
 
+# process rate data
 if len(df) > 0:
     result_dfs.append(df)
     result_df = pd.concat(result_dfs)
     result_df.sort_values("Date", ascending=True, inplace=True)
-    result_df['Date'] = result_df['Date'].map(lambda x: dt.strftime(x, "%Y-%m-%d"))
 
     os.makedirs(DIR, exist_ok=True)
     result_df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
