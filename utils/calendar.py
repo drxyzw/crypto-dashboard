@@ -11,6 +11,11 @@ def USCalendar(subType = ql.UnitedStates.SOFR):
     for d, _ in us_holidays:
         cal.addHoliday(ql.Date(d.day, d.month, d.year))
 
+    if subType == ql.UnitedStates.SOFR:
+        # special market closure date on 18 April 2025
+        # https://www.newyorkfed.org/markets/opolicy/operating_policy_250328a
+        cal.addHoliday(ql.Date(18, 4, 2025))
+
     return cal
 
 def UKCalendar():
