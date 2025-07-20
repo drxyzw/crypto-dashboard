@@ -19,6 +19,9 @@ import pandas as pd
 DIR = "./data_raw"
 LATEST_FILE = "CME_BTC_Future_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
+
+RETRY_TIMES = 5
+
 existing_dates = []
 df_latest = None
 if os.path.exists(latest_full_path):
@@ -70,13 +73,15 @@ if len(DateChoices) > 0:
         dd = f'{evalDate.day:02d}'
         mm = f'{evalDate.month:02d}'
         yyyy = f'{evalDate.year:04d}'
-        url_date = url_base + f'#tradeDate={dd}%2F{mm}%2F{yyyy}'
-        driver.get(url_date)
-        if i_date != 0:
-            driver.refresh()
-
-
-        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+        url_date = url_base + f'#tradeDate={mm}%2F{dd}%2F{yyyy}'
+        retries = 0
+        while retries <= RETRY_TIMES:
+            try:
+                driver.get(url_date)
+                driver.refresh()
+                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+            except Exception as e:
+                retries += 1
 
         trs = driver.execute_script(
             """

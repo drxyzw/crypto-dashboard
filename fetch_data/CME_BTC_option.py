@@ -18,6 +18,9 @@ import pandas as pd
 DIR = "./data_raw"
 LATEST_FILE = "CME_BTC_Option_latest.xlsx"
 latest_full_path = DIR + "/" + LATEST_FILE
+
+RETRY_TIMES = 5
+
 existing_dates = []
 df_latest = None
 if os.path.exists(latest_full_path):
@@ -79,8 +82,7 @@ typeChoiceIDs = [item.get_attribute("data-value").strip() for item in typeItems]
 for i_type, typeChoiceID in enumerate(typeChoiceIDs):
     url_type = url_base + f'#optionProductId={typeChoiceID}'
     driver.get(url_type)
-    if i_type != 0:
-        driver.refresh()
+    driver.refresh()
     # second load to get expiry choices
     ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
@@ -106,16 +108,22 @@ for i_type, typeChoiceID in enumerate(typeChoiceIDs):
                 dd = f'{evalDate.day:02d}'
                 mm = f'{evalDate.month:02d}'
                 yyyy = f'{evalDate.year:04d}'
-                url_type_expiry_date = url_type_expiry + f'&tradeDate={dd}%2F{mm}%2F{yyyy}'
-                driver.get(url_type_expiry_date)
-                driver.refresh()
+                url_type_expiry_date = url_type_expiry + f'&tradeDate={mm}%2F{dd}%2F{yyyy}'
+                retries = 0
+                while retries <= RETRY_TIMES:
+                    try:
+                        driver.get(url_type_expiry_date)
+                        driver.refresh()
+                        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                        break
                 # if i_exp != 0:
                 #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
                 #     expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
                 #     expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
                 # driver.execute_script("arguments[0].click();", expiryItems[i_exp])
-
-                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                    except Exception as e:
+                        retries += 1
+            
                 n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
                 # textBeforeLoadAll = ret.text
                 # textBeforeLoadAll = ret.text
