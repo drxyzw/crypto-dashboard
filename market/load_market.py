@@ -10,6 +10,9 @@ PROCESSED_DIR = "./data_processed"
 # DATE = "20250613"
 
 def loadMarket(py_date):
+    print(f"Finished loading fixing")
+    loadFixing()
+
     YYYYMMDD = dt.strftime(py_date, "%Y%m%d")
     processed_dir_with_date = PROCESSED_DIR+ "/" + YYYYMMDD
 
@@ -72,7 +75,16 @@ def loadMarket(py_date):
     print(f"Finished loading on {YYYYMMDD}")
     return parsed_market_objects
 
+def loadFixing():
+    # load fixing
+    FIXING_DIRECTORY = "./data_raw"
+    sofr_file_name = FIXING_DIRECTORY + "/SOFR_latest.xlsx"
+    df_sofr = pd.read_excel(sofr_file_name)
+    
+    # parse
+    df_sofr["Date"] = df_sofr["Date"].map(lambda x: YYYYMMDDHyphenToQlDate(x))
 
-
-
-
+    sofr_index = SOFR_index()
+    sofr_index.addFixings(df_sofr["Date"].values, df_sofr["Rate"].values)
+    
+    print("Fixing has been set.")
