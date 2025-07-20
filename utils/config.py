@@ -45,8 +45,8 @@ month_name_flag_dict = {
     11: "NOV", # Nov
     12: "DEC", # Dec
 }
-month_name_flag__reverse_dict = {v: k for k, v in month_name_flag_dict.items()}
-month_name_flag__reverse_dict["JUL"] = 7
+month_name_flag_reverse_dict = {v: k for k, v in month_name_flag_dict.items()}
+month_name_flag_reverse_dict["JUL"] = 7
 
 weekday_flag = {
     "Sunday": 1,

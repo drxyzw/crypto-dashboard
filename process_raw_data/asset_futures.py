@@ -25,36 +25,10 @@ def prepare_BTCUSD_futures(marketDate):
     df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])
 
     # process BTC
-    def processExpiryToTicker(expiry_str):
-        expiry_str_strip = expiry_str.strip().replace(" ", "")
-        year_str = expiry_str_strip[3:]
-        month_str = expiry_str_strip[:3]
-        month_number = month_name_flag__reverse_dict[month_str]
-        month_flag = month_flag_dict[month_number]
-        flag = "BTC" + month_flag + year_str
-        return flag
-    def processExpiryToExpiryDate(expiry_str):
-        expiry_str_strip = expiry_str.strip().replace(" ", "")
-        year_str = "20" + expiry_str_strip[3:]
-        month_str = expiry_str_strip[:3]
-        month_number = month_name_flag__reverse_dict[month_str]
-        cal = UKorUSCalendar()
-        ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
-        ql_date = cal.adjust(ql_date, ql.Preceding)
-        # first, check last Friday
-        while ql_date.weekday() != ql.Friday:
-            ql_date -= 1
-        # then adjust
-        ql_date = cal.adjust(ql_date, ql.Preceding)
-
-        py_date = ql_date.to_date()
-        py_date_str = datetime.strftime(py_date, "%Y-%m-%d")
-        return py_date_str
-        
     df_BTC_FUTURES = BTC_FUTURES_raw[BTC_FUTURES_raw['Date'] == marketDate].copy()
     if not df_BTC_FUTURES.empty:
-        df_BTC_FUTURES['Ticker'] = df_BTC_FUTURES['Expiry'].map(processExpiryToTicker)
-        df_BTC_FUTURES['Tenor'] = df_BTC_FUTURES['Expiry'].map(processExpiryToExpiryDate)
+        df_BTC_FUTURES['Ticker'] = df_BTC_FUTURES['Expiry'].map(processBtcFutureExpiryToTicker)
+        df_BTC_FUTURES['Tenor'] = df_BTC_FUTURES['Expiry'].map(processBtcFutureExpiryToExpiryDate)
         df_BTC_FUTURES['Type'] = "FXFUTURE"
         df_BTC_FUTURES.rename(columns={'SettlePrice': 'Rate'}, inplace=True)
         df_data = df_BTC_FUTURES[['Tenor', 'Ticker', 'Type', 'Rate']]

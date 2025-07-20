@@ -68,3 +68,82 @@ def pyDateToQlDate(pyDate):
 def qlDateToPyDate(pyDate):
     return dt(pyDate.year(), pyDate.month(), pyDate.dayOfMonth())
 
+def processBtcFutureExpiryToTicker(expiry_str):
+    expiry_str_strip = expiry_str.strip().replace(" ", "")
+    year_str = expiry_str_strip[3:]
+    month_str = expiry_str_strip[:3]
+    month_number = month_name_flag_reverse_dict[month_str]
+    month_flag = month_flag_dict[month_number]
+    flag = "BTC" + month_flag + year_str
+    return flag
+
+def processBtcFutureExpiryToExpiryDate(expiry_str):
+    expiry_str_strip = expiry_str.strip().replace(" ", "")
+    year_str = "20" + expiry_str_strip[3:]
+    month_str = expiry_str_strip[:3]
+    month_number = month_name_flag_reverse_dict[month_str]
+    cal = UKorUSCalendar()
+    ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
+    ql_date = cal.adjust(ql_date, ql.Preceding)
+    # first, check last Friday
+    while ql_date.weekday() != ql.Friday:
+        ql_date -= 1
+    # then adjust
+    ql_date = cal.adjust(ql_date, ql.Preceding)
+    py_date = ql_date.to_date()
+    py_date_str = datetime.strftime(py_date, "%Y-%m-%d")
+    return py_date_str
+        
+def processBtcOptionExpiryToExpiryDate(option_type_str, expiry_str):
+    expiry_str_strip = expiry_str.strip().replace(" ", "")
+    cal = UKorUSCalendar()
+    if option_type_str == "European Options":
+        year_str = expiry_str_strip[3:]
+        month_str = expiry_str_strip[:3].upper()
+        month_number = month_name_flag_reverse_dict[month_str]
+        ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
+        ql_date = cal.adjust(ql_date, ql.Preceding)
+        while ql_date.weekday() != ql.Friday:
+            ql_date = cal.advance(ql_date, -1, ql.Days, ql.Preceding)
+    elif "Weekly " in option_type_str:
+        option_types = option_type_str.split(" ")
+        dayOfWeek = weekday_flag[option_types[1]]
+        expiry_strs = expiry_str.split(" ") # expiry_str is "Week n-MMM YYYY"
+        nth_week = int(expiry_strs[1][0])
+        expiry_month = month_name_flag_reverse_dict[expiry_strs[1][2:].upper()]
+        expiry_year = int(expiry_strs[2])
+        ql_date = ql.Date.nthWeekday(nth_week, dayOfWeek, expiry_month, expiry_year)
+        while not cal.isBusinessDay(ql_date):
+            nth_week += 1
+            ql_date = ql.Date.nthWeekday(nth_week, dayOfWeek, expiry_month, expiry_year)
+    py_date = ql_date.to_date()
+    py_date_str = datetime.strftime(py_date, "%Y-%m-%d")
+    return py_date_str
+
+
+def processBtcOptionNearestFutureExpiryDate(optionExpiryDateStr):
+    optionExpiryDate = YYYYMMDDHyphenToQlDate(optionExpiryDateStr)
+    year = optionExpiryDate.year()
+    month = optionExpiryDate.month()
+
+    while True:
+        month_flag = month_name_flag_dict[month]
+        expiry_str = month_flag + " " + str(year)[2:]
+        futureExpiryDateStr = processBtcFutureExpiryToExpiryDate(expiry_str)
+        futureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDateStr)
+        # Picking up next available future
+        # https://www.cmegroup.com/content/dam/cmegroup/rulebook/CME/IV/350/350A.pdf
+        # https://www.cmegroup.com/articles/faqs/frequently-asked-questions-options-on-cryptocurrency-futures.html#underlying   
+        if optionExpiryDate <= futureExpiryDate:
+            break
+        else:
+            if month == 12:
+                month = 1
+                year += 1
+            else:
+                month += 1
+    pyFutureExpiryDate = qlDateToPyDate(futureExpiryDate)
+    futureExpiryDateStr = pyFutureExpiryDate.strftime("%Y-%m-%d")
+    return futureExpiryDateStr
+
+

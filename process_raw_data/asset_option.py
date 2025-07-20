@@ -30,40 +30,14 @@ def prepare_BTCUSD_options(marketDate):
                               "Value": [marketDateStr, "Market", "Option", "BTC", "BTCUSD.SPOT", "BTCUSD.OPTION", "USD.SOFR.CSA_USD", "BTC.FUNDING.CSA_USD", "Future"]})
 
     # df for data part
-    df_data = pd.DataFrame(columns=["Tenor", "Ticker", "Type", "Rate"])
+    df_data = pd.DataFrame(columns=["ExpiryDate", "FutureExpiryDate", "Ticker", "Type", "Rate"])
 
     # process BTC
-    def processExpiryToExpiryDate(option_type_str, expiry_str):
-        expiry_str_strip = expiry_str.strip().replace(" ", "")
-        cal = UKorUSCalendar()
-        if option_type_str == "European Options":
-            year_str = expiry_str_strip[3:]
-            month_str = expiry_str_strip[:3].upper()
-            month_number = month_name_flag__reverse_dict[month_str]
-            ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
-            ql_date = cal.adjust(ql_date, ql.Preceding)
-            while ql_date.weekday() != ql.Friday:
-                ql_date = cal.advance(ql_date, -1, ql.Days, ql.Preceding)
-        elif "Weekly " in option_type_str:
-            option_types = option_type_str.split(" ")
-            dayOfWeek = weekday_flag[option_types[1]]
-            expiry_strs = expiry_str.split(" ") # expiry_str is "Week n-MMM YYYY"
-            nth_week = int(expiry_strs[1][0])
-            expiry_month = month_name_flag__reverse_dict[expiry_strs[1][2:].upper()]
-            expiry_year = int(expiry_strs[2])
-            ql_date = ql.Date.nthWeekday(nth_week, dayOfWeek, expiry_month, expiry_year)
-            while not cal.isBusinessDay(ql_date):
-                nth_week += 1
-                ql_date = ql.Date.nthWeekday(nth_week, dayOfWeek, expiry_month, expiry_year)
-
-        py_date = ql_date.to_date()
-        py_date_str = datetime.strftime(py_date, "%Y-%m-%d")
-        return py_date_str
-        
     df_BTC_OPTIONS = BTC_OPTIONS_raw[BTC_OPTIONS_raw['Date'] == marketDate].copy()
     if not df_BTC_OPTIONS.empty:
-        df_BTC_OPTIONS['Tenor'] = df_BTC_OPTIONS.apply(lambda x: processExpiryToExpiryDate(x['OptionType'], x['Expiry']), axis=1)
-        df_BTC_OPTIONS_melt = pd.melt(df_BTC_OPTIONS, id_vars=['Tenor', 'Strike'], value_vars=['SettleCallPrice', 'SettlePutPrice'], var_name="CallPut", value_name="Price")
+        df_BTC_OPTIONS['ExpiryDate'] = df_BTC_OPTIONS.apply(lambda x: processBtcOptionExpiryToExpiryDate(x['OptionType'], x['Expiry']), axis=1)
+        df_BTC_OPTIONS['FutureExpiryDate'] = df_BTC_OPTIONS['ExpiryDate'].map(processBtcOptionNearestFutureExpiryDate)
+        df_BTC_OPTIONS_melt = pd.melt(df_BTC_OPTIONS, id_vars=['ExpiryDate', 'FutureExpiryDate', 'Strike'], value_vars=['SettleCallPrice', 'SettlePutPrice'], var_name="CallPut", value_name="Price")
         df_BTC_OPTIONS_melt.rename(columns={'CallPut': 'OptionType'}, inplace=True)
         df_BTC_OPTIONS_melt['OptionType'] = np.where(df_BTC_OPTIONS_melt['OptionType'] == "SettleCallPrice", "Call", "Put")
         df_BTC_OPTIONS_melt['Price'] = df_BTC_OPTIONS_melt['Price'].map(lambda x: 0.0 if x == "CAB" or x == "-" else float(x))

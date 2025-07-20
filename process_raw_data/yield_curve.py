@@ -47,7 +47,9 @@ def prepare_SOFR_market(marketDate):
         df_futures['EndDate'] = df_futures["Ticker"].map(lambda x: SOFR_futures_reference_peiord(ticker=x)[1])
         df_futures['liquidity_months_limit'] = df_futures["Ticker"].map(lambda x: sofr_futures_months_liquidity_limit[x[:2]])
         df_futures['liquidity_date_limit'] = df_futures.apply(lambda x: dt(x['Date'].year, x['Date'].month, x['Date'].day) + relativedelta(months=x['liquidity_months_limit']), axis=1)
-        df_futures['Include'] = (df_futures['Date'] < df_futures['StartDate']) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
+        # df_futures['Include'] = (df_futures['Date'] < df_futures['StartDate']) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
+        df_futures['PeriodMonths'] = df_futures["Ticker"].map(lambda x: sofr_expiry_months[x[:2]])
+        df_futures['Include'] = (df_futures['PeriodMonths'] == 3) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
         df_futures = df_futures[df_futures['Include']].reset_index(drop=True)
         df_futures['Tenor'] = df_futures.apply(lambda x: str(delta_months(x['Date'].to_pydatetime(), x['EndDate'])) + "M", axis=1)
         df_futures['Type'] = "FUTURE"
