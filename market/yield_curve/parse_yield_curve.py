@@ -24,7 +24,8 @@ def create_rate_helper(row, yc_raw, parsed_market_objects = None, days=0):
     elif rate_type == "OIS":
         if ticker.startswith("SOFR"):
             index = SOFR_index()
-            helper = ql.OISRateHelper(2, ql.Period(tenor), rate, index)
+            rateQuote = ql.QuoteHandle(ql.SimpleQuote(rate))
+            helper = ql.OISRateHelper(2, ql.Period(tenor), rateQuote, index)
         else:
             raise ValueError(f"Unsupported ticker {ticker} for OIS rate helper")
     elif rate_type == "FXFUTURE":
@@ -71,7 +72,8 @@ def parse_yield_curve(yc_raw, parsed_market_objects):
     marketDate = YYYYMMDDHyphenToQlDate(yc_raw['Date'])
     ql.Settings.instance().evaluationDate = marketDate
     rateHelpers = data.apply(lambda x: create_rate_helper(x, yc_raw, parsed_market_objects), axis=1)
-    yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
+    yc = ql.PiecewiseLogLinearDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
+    # yc = ql.PiecewiseLogCubicDiscount(marketDate, rateHelpers, ql.Actual365Fixed())
     yc.enableExtrapolation()
     yc_handler = ql.YieldTermStructureHandle(yc)
     return yc_handler

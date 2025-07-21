@@ -14,7 +14,7 @@ RAW_DIR = "./data_raw"
 BTC_OPTION_FILE = RAW_DIR + "/CME_BTC_option_latest.xlsx"
 PROCESSED_DIR = "./data_processed"
 
-@memory.cache
+# @memory.cache
 def load_excel_with_cache(file_path):
     return pd.read_excel(file_path)
 
@@ -58,6 +58,7 @@ def prepare_BTCUSD_options(marketDate):
 
 if __name__ == "__main__":
     marketDate = dt(2025, 6, 13)
+    # marketDate = dt(2025, 7, 14)
     while marketDate < dt.now():
         prepare_BTCUSD_options(marketDate)
         marketDate += relativedelta(days=1)
