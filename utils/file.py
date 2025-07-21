@@ -2,6 +2,9 @@ import os
 
 def getAllFilesInDirectory(directory, full_path = True):
     files_in_directory = []
+    if not os.path.exists(directory):
+        return []
+    
     for entry in os.listdir(directory):
         full_path_file = os.path.join(directory, entry)
         if os.path.isfile(full_path_file) and not "~" in full_path_file:

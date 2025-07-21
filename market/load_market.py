@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime as dt
 
 from utils.file import *
+from utils.convention import *
 from market.yield_curve.parse_yield_curve import *
 from market.assset_index.parse_spot import *
 
@@ -16,10 +17,14 @@ def loadMarket(py_date):
     YYYYMMDD = dt.strftime(py_date, "%Y%m%d")
     processed_dir_with_date = PROCESSED_DIR+ "/" + YYYYMMDD
 
+    ql.Settings.instance().evaluationDate = pyDateToQlDate(py_date)
+
     # load all excels from a directory
     files = getAllFilesInDirectory(processed_dir_with_date)
     market_raw_dfs = {}
     for file in files:
+        if "VOLSURFACE" in file:
+            continue
         config_sheet = pd.read_excel(file, sheet_name="Config")
         config_dict = convertDataframeToDictionary(config_sheet)
         marketDate = config_dict['Date']
