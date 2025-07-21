@@ -34,10 +34,14 @@ def prepare_SOFR_market(marketDate):
 
     # process SOFR
     df_sofr = sofr_raw[sofr_raw['Date'] == marketDate]
+    soft_end_date = None
     if not df_sofr.empty:
         sofr = df_sofr["Rate"].values[0]
         df_sofr = pd.DataFrame([["ON", "SOFRRATE", "DEPOSIT", sofr]], columns=df_data.columns, )
         dfs_data.append(df_sofr)
+        ql_market_date = pyDateToQlDate(marketDate)
+        ql_soft_end_date = USCalendar().advance(ql_market_date, ql.Period("1D"))
+        soft_end_date = qlDateToPyDate(ql_soft_end_date).date()
     
     # process futures
     sofr_futures_raw.rename(columns={"Last": "Rate"}, inplace=True)
@@ -49,7 +53,10 @@ def prepare_SOFR_market(marketDate):
         df_futures['liquidity_date_limit'] = df_futures.apply(lambda x: dt(x['Date'].year, x['Date'].month, x['Date'].day) + relativedelta(months=x['liquidity_months_limit']), axis=1)
         # df_futures['Include'] = (df_futures['Date'] < df_futures['StartDate']) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
         df_futures['PeriodMonths'] = df_futures["Ticker"].map(lambda x: sofr_expiry_months[x[:2]])
-        df_futures['Include'] = (df_futures['PeriodMonths'] == 3) & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
+        df_futures['Include'] = ((df_futures['PeriodMonths'] == 3)
+                                 & (df_futures['EndDate'] < df_futures['liquidity_date_limit'])
+                                 & (marketDate.date() < df_futures['EndDate'])
+                                 & ((soft_end_date is None or soft_end_date < df_futures['EndDate'])))
         df_futures = df_futures[df_futures['Include']].reset_index(drop=True)
         df_futures['Tenor'] = df_futures.apply(lambda x: str(delta_months(x['Date'].to_pydatetime(), x['EndDate'])) + "M", axis=1)
         df_futures['Type'] = "FUTURE"
@@ -83,6 +90,7 @@ def prepare_SOFR_market(marketDate):
 
 
 if __name__ == "__main__":
+    # marketDate = dt(2025, 7, 18)
     marketDate = dt(2025, 6, 13)
     while marketDate < dt.now():
         prepare_SOFR_market(marketDate)
