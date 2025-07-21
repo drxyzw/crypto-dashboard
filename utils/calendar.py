@@ -1,11 +1,11 @@
-from workalendar.usa import UnitedStates
+from workalendar.usa import FederalReserveSystem
 from workalendar.europe import UnitedKingdom
 import QuantLib as ql
 HOLIDAY_YEARS = list(range(2020, 2080 + 1))
 
 def USCalendar(subType = ql.UnitedStates.SOFR):
     cal = ql.WeekendsOnly()
-    us_cal = UnitedStates()
+    us_cal = FederalReserveSystem()
     us_holidays = [us_cal.holidays(y) for y in HOLIDAY_YEARS]
     us_holidays = sum(us_holidays, []) # make it flat
     for d, _ in us_holidays:
@@ -30,7 +30,7 @@ def UKCalendar():
 
 def UKorUSCalendar():
     cal = ql.WeekendsOnly()
-    us_cal = UnitedStates()
+    us_cal = FederalReserveSystem()
     us_holidays = [us_cal.holidays(y) for y in HOLIDAY_YEARS]
     us_holidays = sum(us_holidays, []) # make it flat
     us_holidays = [p[0] for p in us_holidays]
