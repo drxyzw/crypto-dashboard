@@ -12,8 +12,41 @@ PROCESSED_DIR = "./data_processed"
 #             df_config.to_excel(ew, sheet_name="Config", index=False)
 #             df_data.to_excel(ew, sheet_name="Data", index=False)
 FUTURE_CHECK = True
+FUTURE_FROM_DATA_NOT_YC = True
 RAISE_OR_PRINT = False
 EPS = 1.e-3
+
+def implyFutureAndDomDF(df_data, marketDate):
+    ols_model = LinearRegression()
+    for expiryDate in df_data['ExpiryDate'].unique():
+        qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
+        if qlExpiryDate <= marketDate:
+            continue
+        df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
+        for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
+            qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
+            if qlFutureExpiryDate <= marketDate or qlFutureExpiryDate <= qlExpiryDate:
+                continue
+            # from linear regression, compute DF for option expiry and underlying future
+            df_data_f_expiry_date = df_data_expiry_date[(df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]
+            strike = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Strike"].values
+            call = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Price"].values
+            put = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Price"].values
+            # y = call - put = DF*(F - K) = -DF * K + (DF*F)
+            # a = -DF, b = DF*F
+            # DF = -a, F = b / DF
+            x = [[k] for k in strike]
+            y = call - put
+            ols_model.fit(x, y)
+            a = ols_model.coef_[0]
+            b = ols_model.intercept_
+            domDfOption_ref = -a
+            f_ref = b / domDfOption_ref
+            mask = (df_data['ExpiryDate'] == expiryDate) & (df_data['FutureExpiryDate'] == futureExpiryDate)
+            df_data.loc[mask, "ImpliedFuture"] = f_ref
+            df_data.loc[mask, "ImpliedDomDF"] = domDfOption_ref
+    return df_data
+
 
 def build_volatility_surface(market_dict):
     if not market_dict:
@@ -49,29 +82,34 @@ def build_volatility_surface(market_dict):
     pyMarketDate = dt.strptime(marketDateStr, "%Y-%m-%d")
     marketDate = pyDateToQlDate(pyMarketDate)
 
-    def implied_volatility(row):
+    def implied_volatility(row, impliedFuture):
         # In BTC, settlement lag is 0
         expiryDate = pyDateToQlDate(dt.strptime(row['ExpiryDate'], "%Y-%m-%d"))
         if expiryDate <= marketDate:
             return None
-        domDfOption = domYc.discount(expiryDate)
-        assetDfOption = assetYc.discount(expiryDate)
         price = row['Price']
+        if impliedFuture:
+            domDfOption = row["ImpliedDomDF"]
+        else:
+            domDfOption = domYc.discount(expiryDate)
+            assetDfOption = assetYc.discount(expiryDate)
         undisc_price = price / domDfOption
 
         # underlying futures
         futureExpiryDate = pyDateToQlDate(dt.strptime(row['FutureExpiryDate'], "%Y-%m-%d"))
         if futureExpiryDate <= marketDate  or futureExpiryDate <= expiryDate:
             return None
-        domDfUnderlying = domYc.discount(futureExpiryDate)
-        assetDfUnderlying = assetYc.discount(futureExpiryDate)
+        if impliedFuture:
+            f = row["ImpliedFuture"]
+        else:
+            domDfUnderlying = domYc.discount(futureExpiryDate)
+            assetDfUnderlying = assetYc.discount(futureExpiryDate)
+            f = spotPrice * assetDfUnderlying / domDfUnderlying
         cp = ql.Option.Call if row['OptionType'] == "Call" else ql.Option.Put
         k = float(row['Strike'])
-        dfRatio = domDfUnderlying / domDfOption 
         # dfRatio = assetDfOption / assetDfUnderlying
         # dfRatio = 1.0
         # f = dfRatio * (spotPrice * assetDfUnderlying / domDfUnderlying)
-        f = spotPrice * assetDfUnderlying / domDfUnderlying
         dc = ql.ActualActual(ql.ActualActual.ISDA)
         t = dc.yearFraction(marketDate, expiryDate)
 
@@ -93,71 +131,79 @@ def build_volatility_surface(market_dict):
             else:
                 return None
 
-    df_data["ImpliedVol"] = df_data.apply(implied_volatility, axis=1)
-
-    if FUTURE_CHECK:
-        ols_model = LinearRegression()
-        for expiryDate in df_data['ExpiryDate'].unique():
-            qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
-            if qlExpiryDate <= marketDate:
-                continue
-            df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
-            for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
-                qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
-                if qlFutureExpiryDate <= marketDate  or qlFutureExpiryDate <= qlExpiryDate:
-                    continue
-                # from linear regression, compute DF for option expiry and underlying future
-                df_data_f_expiry_date = df_data_expiry_date[(df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]
-                strike = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Strike"].values
-                call = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Price"].values
-                put = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Price"].values
-                # y = call - put = DF*(F - K) = -DF * K + (DF*F)
-                # a = -DF, b = DF*F
-                # DF = -a, F = b / DF
-                x = [[k] for k in strike]
-                y = call - put
-                ols_model.fit(x, y)
-                a = ols_model.coef_[0]
-                b = ols_model.intercept_
-                domDfOption_ref = -a
-                f_ref = b / domDfOption_ref
-
-                # DF for option expiry from yield curve
+    if FUTURE_FROM_DATA_NOT_YC:
+        df_data = implyFutureAndDomDF(df_data, marketDate)
+        df_data["ImpliedVol"] = df_data.apply(lambda x: implied_volatility(x, impliedFuture=True), axis=1)
+    else:
+        df_data["ImpliedVol"] = df_data.apply(lambda x: implied_volatility(x, impliedFuture=False), axis=1)
+        if FUTURE_CHECK:
+            df_data = implyFutureAndDomDF(df_data, marketDate)
+            for expiryDate in df_data['ExpiryDate'].unique():
                 qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
-                domDfOption = domYc.discount(qlExpiryDate)
-                assetDfOption = assetYc.discount(qlExpiryDate)
+                if qlExpiryDate <= marketDate:
+                    continue
+                df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
+                for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
+                    qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
+                    if qlFutureExpiryDate <= marketDate or qlFutureExpiryDate <= qlExpiryDate:
+                        continue
+                    # DF for option expiry from yield curve
+                    qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
+                    domDfOption = domYc.discount(qlExpiryDate)
+                    assetDfOption = assetYc.discount(qlExpiryDate)
 
-                # underlying futures from yield curve
-                qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
-                domDfUnderlying = domYc.discount(qlFutureExpiryDate)
-                assetDfUnderlying = assetYc.discount(qlFutureExpiryDate)
-                # dfRatio = assetDfOption / assetDfUnderlying
-                # dfRatio = domDfUnderlying / domDfOption 
-                # dfRatio = 1.0
-                # f = dfRatio * (spotPrice * assetDfUnderlying / domDfUnderlying)
-                f = spotPrice * assetDfUnderlying / domDfUnderlying
+                    # underlying futures from yield curve
+                    qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
+                    domDfUnderlying = domYc.discount(qlFutureExpiryDate)
+                    assetDfUnderlying = assetYc.discount(qlFutureExpiryDate)
+                    # dfRatio = assetDfOption / assetDfUnderlying
+                    # dfRatio = domDfUnderlying / domDfOption 
+                    # dfRatio = 1.0
+                    # f = dfRatio * (spotPrice * assetDfUnderlying / domDfUnderlying)
+                    f = spotPrice * assetDfUnderlying / domDfUnderlying
 
-                # EPS
-                domDfOptionError = domDfOption / domDfOption_ref - 1.0
-                if abs(domDfOptionError) > EPS:
-                    message = (f"Domestic option DF from option data: {domDfOption}, "
-                               f"domestic option DF from yield curve {domDfOption_ref}, "
-                               f"relative error: {domDfOptionError}")
-                    if RAISE_OR_PRINT:
-                        raise ValueError(message)
-                    else:
-                        print(message)
+                    f_ref = df_data_expiry_date[
+                        (df_data_expiry_date['ExpiryDate'] == expiryDate)
+                        & (df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]["ImpliedFuture"].values[0]
+                    domDfOption_ref = df_data_expiry_date[
+                        (df_data_expiry_date['ExpiryDate'] == expiryDate)
+                        & (df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]["ImpliedDomDF"].values[0]
 
-                futureError = f / f_ref - 1.0
-                if abs(futureError) > EPS:
-                    message = (f"Future from option data: {f}, "
-                               f"future from yield curve {f_ref}, "
-                               f"relative error: {futureError}")
-                    if RAISE_OR_PRINT:
-                        raise ValueError(message)
-                    else:
-                        print(message)
+                    # EPS
+                    domDfOptionError = domDfOption / domDfOption_ref - 1.0
+                    if abs(domDfOptionError) > EPS:
+                        message = (f"Domestic option DF from option data: {domDfOption}, "
+                                   f"domestic option DF from yield curve {domDfOption_ref}, "
+                                   f"relative error: {domDfOptionError}")
+                        if RAISE_OR_PRINT:
+                            raise ValueError(message)
+                        else:
+                            print(message)
+
+                    futureError = f / f_ref - 1.0
+                    if abs(futureError) > EPS:
+                        message = (f"Future from option data: {f}, "
+                                   f"future from yield curve {f_ref}, "
+                                   f"relative error: {futureError}")
+                        if RAISE_OR_PRINT:
+                            raise ValueError(message)
+                        else:
+                            print(message)
+            
 
     df_data.dropna(subset=["ImpliedVol"], inplace=True)
+
+    for expiryDate in df_data['ExpiryDate'].unique():
+        qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
+        if qlExpiryDate <= marketDate:
+            continue
+        df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
+        for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
+            qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
+            if qlFutureExpiryDate <= marketDate or qlFutureExpiryDate <= qlExpiryDate:
+                continue
+
+            # from linear regression, compute DF for option expiry and underlying future
+
     df_data.to_excel(directory + f"/BTCUSDVOLSURFACE_{YYYYMMDD}.xlsx", index=False)
     return
