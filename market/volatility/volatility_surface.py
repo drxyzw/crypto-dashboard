@@ -162,12 +162,16 @@ def arbitrageCheck(row, domDfOption, optionType):
     for i in range(len(ks)-1):
         slope = (prices[i+1] - prices[i]) / (ks[i+1] - ks[i])
         slopes[i] = slope
-        if ((optionType == "Call" and (slope <= -1. or 0. <= slope)) or
-            (optionType == "Put" and (slope <= 0. or 1. <= slope))):
-            flags[i].add("CS")
-            flags[i+1].add("CS")
 
     for i in range(1, len(ks)-1):
+        if ((optionType == "Call" and (slopes[i-1] <= -1. or 0. <= slopes[i-1])) or
+            (optionType == "Put" and (slopes[i-1] <= 0. or 1. <= slopes[i-1]))):
+            if ((optionType == "Call" and (slopes[i] <= -1. or 0. <= slopes[i])) or
+            (optionType == "Put" and (slopes[i] <= 0. or 1. <= slopes[i]))):
+                flags[i].add("CS")
+            else:
+                flags[i-1].add("CS")
+
         if not slopes[i-1] < slopes[i]:
             flags[i].add("BF")
 
