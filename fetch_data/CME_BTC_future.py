@@ -80,6 +80,7 @@ if len(DateChoices) > 0:
                 driver.get(url_date)
                 driver.refresh()
                 ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                break
             except Exception as e:
                 retries += 1
 
