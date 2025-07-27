@@ -26,7 +26,7 @@ sidebar = html.Div([
     dbc.Nav([
         dbc.NavLink("Home", href="/", active="exact"),
         dbc.NavLink("USD SOFR Yield Curve", href="/sofr_curve", active="exact"),
-        dbc.NavLink("BTC/USD Future Curve", href="/btc_forward", active="exact"),
+        dbc.NavLink("BTC/USD Future Curve", href="/btc_future", active="exact"),
         dbc.NavLink("BTC/USD Volatility Surface ", href="/btc_volsurface", active="exact"),
     ],
     vertical=True,
