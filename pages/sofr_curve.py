@@ -1,10 +1,8 @@
 import dash
-from dash import html, dcc, callback, Input, Output, State, ALL, ctx, dash_table
+from dash import html, dcc, callback, Input, Output, dash_table
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
-import random
 from datetime import datetime as dt
-from dateutil.relativedelta import relativedelta
 import pandas as pd
 
 from utils.convention import *
@@ -20,11 +18,6 @@ HEADER_STYLE = {
 CONTENT_STYLE = {
     "padding": "2rem 1rem",
 }
-
-levels = ["Elemtary (1-digit and no regrouping)",
-                    "Easy (1-digit and regrouping)",
-                    "Intermediate (2-digit)",
-                    ]
 
 PROCESSED_DIR = "./data_processed"
 df_market_object_list = pd.read_excel(PROCESSED_DIR + "/market_objects.xlsx")
