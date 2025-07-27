@@ -78,8 +78,6 @@ for instrument_flag in sofr_instrument_flags:
             print(f"Error in URL {url}")
             break
 
-        driver.get(url)
-
         # # Wait for page to load and scroll to trigger lazy loading
         # time.sleep(5)  # or use WebDriverWait if needed
         # driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -87,6 +85,7 @@ for instrument_flag in sofr_instrument_flags:
 
         # Locate the shadow host
         try:
+            driver.get(url)
             shadow_host = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.TAG_NAME, "bc-data-grid"))
         )
