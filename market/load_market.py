@@ -10,7 +10,7 @@ from market.assset_index.parse_spot import *
 PROCESSED_DIR = "./data_processed"
 # DATE = "20250613"
 
-def loadMarket(py_date):
+def loadMarket(py_date, names = []):
     print(f"Finished loading fixing")
     loadFixing()
 
@@ -23,7 +23,7 @@ def loadMarket(py_date):
     files = getAllFilesInDirectory(processed_dir_with_date)
     market_raw_dfs = {}
     for file in files:
-        if "VOLSURFACE" in file:
+        if "VOLSURFACE" in file or "IMPLIEDVOL" in file:
             continue
         config_sheet = pd.read_excel(file, sheet_name="Config")
         config_dict = convertDataframeToDictionary(config_sheet)
@@ -39,7 +39,8 @@ def loadMarket(py_date):
 
         market_raw_dict = config_dict.copy()
         market_raw_dict['Data'] = data_sheet
-        market_raw_dfs[name] = market_raw_dict
+        if name in names:
+            market_raw_dfs[name] = market_raw_dict
 
     parsed_market_objects = {}
     # choose a first group (yield curve without dependency)
