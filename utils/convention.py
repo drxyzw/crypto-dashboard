@@ -68,6 +68,17 @@ def pyDateToQlDate(pyDate):
 def qlDateToPyDate(pyDate):
     return dt(pyDate.year(), pyDate.month(), pyDate.dayOfMonth())
 
+def btcMonthlySettlementDate(year_str, month_str, calendar):
+    month_number = month_name_flag_reverse_dict[month_str]
+    ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
+    ql_date = calendar.adjust(ql_date, ql.Preceding)
+    # first, check last Friday
+    while ql_date.weekday() != ql.Friday:
+        ql_date -= 1
+    # then adjust
+    ql_date = calendar.adjust(ql_date, ql.Preceding)
+    return ql_date
+
 def processBtcFutureExpiryToTicker(expiry_str):
     expiry_str_strip = expiry_str.strip().replace(" ", "")
     year_str = expiry_str_strip[3:]
@@ -81,15 +92,8 @@ def processBtcFutureExpiryToExpiryDate(expiry_str):
     expiry_str_strip = expiry_str.strip().replace(" ", "")
     year_str = "20" + expiry_str_strip[3:]
     month_str = expiry_str_strip[:3]
-    month_number = month_name_flag_reverse_dict[month_str]
     cal = UKorUSCalendar()
-    ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
-    ql_date = cal.adjust(ql_date, ql.Preceding)
-    # first, check last Friday
-    while ql_date.weekday() != ql.Friday:
-        ql_date -= 1
-    # then adjust
-    ql_date = cal.adjust(ql_date, ql.Preceding)
+    ql_date = btcMonthlySettlementDate(year_str, month_str, cal)
     py_date = ql_date.to_date()
     py_date_str = datetime.strftime(py_date, "%Y-%m-%d")
     return py_date_str
@@ -100,11 +104,7 @@ def processBtcOptionExpiryToExpiryDate(option_type_str, expiry_str):
     if option_type_str == "European Options":
         year_str = expiry_str_strip[3:]
         month_str = expiry_str_strip[:3].upper()
-        month_number = month_name_flag_reverse_dict[month_str]
-        ql_date = ql.Date.endOfMonth(ql.Date(1, month_number, int(year_str)))
-        ql_date = cal.adjust(ql_date, ql.Preceding)
-        while ql_date.weekday() != ql.Friday:
-            ql_date = cal.advance(ql_date, -1, ql.Days, ql.Preceding)
+        ql_date = btcMonthlySettlementDate(year_str, month_str, cal)
     elif "Weekly " in option_type_str:
         option_types = option_type_str.split(" ")
         dayOfWeek = weekday_flag[option_types[1]]

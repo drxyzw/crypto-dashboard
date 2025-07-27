@@ -180,6 +180,57 @@ def arbitrageCheck(row, domDfOption, optionType):
         
     return flags
     
+def checkCalendarArbitrage(row, df_smile_obj):
+    if row['Arbitrage'] == '':
+        arb_flags = set()
+    else:
+        arb_flags = set(row['Arbitrage'].split(","))
+    t = row["TTM"]
+    expiryDate = row["ExpiryDate"]
+    strike = row["Strike"]
+    vol = row["Vol"]
+    # TTMs = df_smile_obj['TTM'].unique().values
+    expiryDates = list(df_smile_obj['ExpiryDate'].unique())
+    expiryDates.sort()
+    expiryDate_i = expiryDates.index(expiryDate)
+    if expiryDate_i == 0:
+        i_m1 = expiryDate_i
+        i_0 = expiryDate_i + 1
+        i_p1 = expiryDate_i + 2
+    elif expiryDate_i == len(expiryDates) - 1:
+        i_m1 = expiryDate_i - 2
+        i_0 = expiryDate_i - 1
+        i_p1 = expiryDate_i
+    else:
+        i_m1 = expiryDate_i - 1
+        i_0 = expiryDate_i
+        i_p1 = expiryDate_i + 1
+
+    v_m1 = df_smile_obj[df_smile_obj['ExpiryDate'] == expiryDates[i_m1]]["SmileObject"].values[0]
+    v_0 = df_smile_obj[df_smile_obj['ExpiryDate'] == expiryDates[i_0]]["SmileObject"].values[0]
+    v_p1 = df_smile_obj[df_smile_obj['ExpiryDate'] == expiryDates[i_p1]]["SmileObject"].values[0]
+    var_m1 = v_m1.variance(strike)
+    var_0 = v_0.variance(strike)
+    var_p1 = v_p1.variance(strike)
+    var_m1_0 = var_0 - var_m1
+    var_0_p1 = var_p1 - var_0
+
+    arbDetected = False   
+    if expiryDate_i == 0:
+        if var_m1_0 < 0. and var_0_p1 >= 0.:
+            arbDetected = True
+    elif expiryDate_i == len(expiryDates)  - 1:
+        if var_m1_0 >= 0. and var_0_p1 < 0.:
+            arbDetected = True
+    else:
+        if var_m1_0 < 0. or var_0_p1 < 0.:
+            arbDetected = True
+
+    if arbDetected:
+        arb_flags.add("CA")
+        return ",".join(arb_flags)
+    else:
+        return row['Arbitrage']
 
 def build_volatility_surface(market_dict):
     if not market_dict:
@@ -296,17 +347,23 @@ def build_volatility_surface(market_dict):
             df_smile["FutureExpiryDate"] = [futureExpiryDate] * len(stds)
             df_smile["TTM"] = [t] * len(stds)
             df_smile["Strike"] = strikes
+            df_smile["Vol"] = vols
             df_smile["Arbitrage"] = arb_flags
             dfs_smile.append(df_smile)
 
             df_smile_obj = pd.DataFrame()
-            df_smile_obj["TTM"] = t
-            df_smile_obj["SmileObject"] = smileSection
+            df_smile_obj["TTM"] = [t]
+            df_smile_obj["SmileObject"] = [smileSection]
             dfs_smile_obj.append(df_smile_obj)
 
+    df_smile = pd.concat(dfs_smile).reset_index(drop=True)
+    df_smile_obj = pd.concat(dfs_smile_obj).sort_values(by="TTM").reset_index(drop=True)
+
     # calendar arbitrage check
+    df_smile_with_obj = df_smile.merge(df_smile_obj, on="TTM", how="left")
+    df_smile_with_obj["Arbitrage"] = df_smile_with_obj.apply(lambda x: checkCalendarArbitrage(x, df_smile_with_obj), axis=1)
+    df_smile = df_smile_with_obj.drop(columns="SmileObject")
 
-            
-
-    df_data.to_excel(directory + f"/BTCUSDVOLSURFACE_{YYYYMMDD}.xlsx", index=False)
+    df_smile.to_excel(directory + f"/BTCUSDVOLSURFACE_{YYYYMMDD}.xlsx", index=False)
+    df_data.to_excel(directory + f"/BTCUSDIMPLIEDVOL{YYYYMMDD}.xlsx", index=False)
     return
