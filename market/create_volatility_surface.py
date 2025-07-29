@@ -11,7 +11,9 @@ if __name__ == "__main__":
     dfs_mkt_list = []
     while py_date < dt.now():
         market = loadMarket(py_date)
-        build_volatility_surface(market)
+        market_vol = build_volatility_surface(market)
+        if not market_vol is None:
+            market = market_vol
 
         if not market is None:
             str_date = py_date.strftime("%Y-%m-%d")

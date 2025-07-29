@@ -180,7 +180,7 @@ def arbitrageCheck(row, domDfOption, optionType):
         
     return flags
     
-def checkCalendarArbitrage(row, df_smile_obj):
+def checkCalendarArbitrageOnVolatility(row, df_smile_obj):
     if row['Arbitrage'] == '':
         arb_flags = set()
     else:
@@ -223,7 +223,83 @@ def checkCalendarArbitrage(row, df_smile_obj):
         if var_m1_0 >= 0. and var_0_p1 < 0.:
             arbDetected = True
     else:
-        if var_m1_0 < 0. or var_0_p1 < 0.:
+        if var_m1_0 < 0.:
+        # if var_m1_0 < 0. or var_0_p1 < 0.:
+            arbDetected = True
+
+    if arbDetected:
+        arb_flags.add("CA")
+        return ",".join(arb_flags)
+    else:
+        return row['Arbitrage']
+
+def checkCalendarArbitrageOnPrice(row, df_price):
+    if row['Arbitrage'] == '':
+        arb_flags = set()
+    else:
+        arb_flags = set(row['Arbitrage'].split(","))
+    expiryDate = row["ExpiryDate"]
+    strike = row["Strike"]
+    ot = row["OptionType"]
+    # TTMs = df_smile_obj['TTM'].unique().values
+    expiryDates = list(df_price['ExpiryDate'].unique())
+    expiryDates.sort()
+    expiryDate_i = expiryDates.index(expiryDate)
+    if expiryDate_i == 0:
+        i_m1 = expiryDate_i
+        i_0 = expiryDate_i + 1
+        i_p1 = expiryDate_i + 2
+    elif expiryDate_i == len(expiryDates) - 1:
+        i_m1 = expiryDate_i - 2
+        i_0 = expiryDate_i - 1
+        i_p1 = expiryDate_i
+    else:
+        i_m1 = expiryDate_i - 1
+        i_0 = expiryDate_i
+        i_p1 = expiryDate_i + 1
+
+    # domDF = df_price[df_price]["ImpliedDomDF"]
+    masked_m1 = df_price[((df_price['ExpiryDate'] == expiryDates[i_m1])
+                        & (df_price['OptionType'] == ot)
+                        & (df_price['Strike'] == strike))]
+    und_price_m1 = (masked_m1["Price"].values[0] / masked_m1["ImpliedDomDF"].values[0]
+                    if not masked_m1.empty else None)
+
+    masked_0 = df_price[((df_price['ExpiryDate'] == expiryDates[i_0])
+                        & (df_price['OptionType'] == ot)
+                        & (df_price['Strike'] == strike))]
+    und_price_0 = (masked_0["Price"].values[0] / masked_0["ImpliedDomDF"].values[0]
+                   if not masked_0.empty else None)
+
+    masked_p1 = df_price[(df_price['ExpiryDate'] == expiryDates[i_p1])
+                        & (df_price['OptionType'] == ot)
+                        & (df_price['Strike'] == strike)]
+    und_price_p1 = (masked_p1["Price"].values[0] / masked_p1["ImpliedDomDF"].values[0]
+                    if not masked_p1.empty else None)
+
+    und_price_m1_0 = ((und_price_0 - und_price_m1)
+                      if not und_price_0 is None and not und_price_m1 is None else None)
+    und_price_0_p1 = ((und_price_p1 - und_price_0)
+                      if not und_price_p1 is None and not und_price_0 is None else None)
+
+    arbDetected = False   
+    if expiryDate_i == 0:
+        if (not und_price_m1_0 is None) and (not und_price_0_p1 is None):
+            if und_price_m1_0 < 0. and und_price_0_p1 >= 0.:
+                arbDetected = True
+        elif (not und_price_0_p1 is None):
+            if und_price_m1_0 < 0.:
+                arbDetected = True
+    elif expiryDate_i == len(expiryDates) - 1:
+        if (not und_price_m1_0 is None) and (not und_price_0_p1 is None):
+            if und_price_m1_0 >= 0. and und_price_0_p1 < 0.:
+                arbDetected = True
+        elif (not und_price_m1_0 is None):
+            if und_price_0_p1 < 0.:
+                arbDetected = True
+    else:
+        if (not und_price_m1_0 is None) and (und_price_m1_0 < 0.):
+        # if var_m1_0 < 0. or var_0_p1 < 0.:
             arbDetected = True
 
     if arbDetected:
@@ -243,7 +319,6 @@ def build_volatility_surface(market_dict):
     PROCESSED_FILE = f"BTCUSDOPTION_{YYYYMMDD}.xlsx"
     directory = PROCESSED_DIR + f"./{YYYYMMDD}"
     full_path = directory + "/" + PROCESSED_FILE
-
     if not os.path.exists(full_path):
         return None
     
@@ -361,9 +436,13 @@ def build_volatility_surface(market_dict):
 
     # calendar arbitrage check
     df_smile_with_obj = df_smile.merge(df_smile_obj, on="TTM", how="left")
-    df_smile_with_obj["Arbitrage"] = df_smile_with_obj.apply(lambda x: checkCalendarArbitrage(x, df_smile_with_obj), axis=1)
+    df_smile_with_obj["Arbitrage"] = df_smile_with_obj.apply(lambda x: checkCalendarArbitrageOnVolatility(x, df_smile_with_obj), axis=1)
     df_smile = df_smile_with_obj.drop(columns="SmileObject")
 
+    df_data["Arbitrage"] = df_data.apply(lambda x: checkCalendarArbitrageOnPrice(x, df_data), axis=1)
+
     df_smile.to_excel(directory + f"/BTCUSDVOLSURFACE_{YYYYMMDD}.xlsx", index=False)
-    df_data.to_excel(directory + f"/BTCUSDIMPLIEDVOL{YYYYMMDD}.xlsx", index=False)
-    return
+    df_data.to_excel(directory + f"/BTCUSDIMPLIEDVOL{YYYYMMDD}.xlsx", index=False) # just added implied vol to option price input
+
+    market_dict['BTCUSD.VOLSURFACE'] = df_smile
+    return market_dict

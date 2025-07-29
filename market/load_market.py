@@ -39,7 +39,7 @@ def loadMarket(py_date, names = []):
 
         market_raw_dict = config_dict.copy()
         market_raw_dict['Data'] = data_sheet
-        if name in names:
+        if len(names) == 0 or name in names:
             market_raw_dfs[name] = market_raw_dict
 
     parsed_market_objects = {}

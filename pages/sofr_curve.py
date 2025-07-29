@@ -29,8 +29,8 @@ layout = html.Div([
         dcc.Dropdown(id="date-selector", options = dateList, value = dateList[0]),
     ], style=CONTENT_STYLE),
     dbc.Row([
-        dbc.Col(html.Div(id="table-container"), width=5),
-        dbc.Col(dcc.Graph(id="chart-container",
+        dbc.Col(html.Div(id="sofr-table-container"), width=5),
+        dbc.Col(dcc.Graph(id="sofr-chart-container",
                           responsive=True,
                         ),
                 width=7,
@@ -39,8 +39,8 @@ layout = html.Div([
 ])
 
 @callback(
-    Output("table-container", "children"),
-    Output("chart-container", "figure"),
+    Output("sofr-table-container", "children"),
+    Output("sofr-chart-container", "figure"),
     Input("date-selector", "value"),
 )
 def update_output(selected_date_str):
