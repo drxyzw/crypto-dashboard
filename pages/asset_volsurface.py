@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import ast
 import scipy.spatial
+from scipy.interpolate import interp1d
 
 from utils.convention import *
 from market.load_market import loadMarket
@@ -35,6 +36,9 @@ layout = html.Div([
     html.Div([
         dcc.Dropdown(id="date-selector", options = dateList, value = dateList[0]),
     ], style=CONTENT_STYLE),
+    dcc.Checklist(id="arbitrage-checklist",
+                  options=["Show arbitrage point"],
+                  value=[]),
     dbc.Row([
         dbc.Col(dcc.Graph(id="volsurface-chart-container",
                           responsive=True,
@@ -46,8 +50,10 @@ layout = html.Div([
 @callback(
     Output("volsurface-chart-container", "figure"),
     Input("date-selector", "value"),
+    Input("arbitrage-checklist", "value"),
 )
-def update_output(selected_date_str):
+def update_output(selected_date_str, arbitrage_checklist_value):
+    show_arbitrage_point = len(arbitrage_checklist_value) > 0
     selected_date_py = dt.strptime(selected_date_str, "%Y-%m-%d")
     selected_date_ql = YYYYMMDDHyphenToQlDate(selected_date_str)
     mkt_object_names = ['BTCUSD.VOLSURFACE']
@@ -67,30 +73,99 @@ def update_output(selected_date_str):
     #     # "7Y", "10Y",
     #     # "12Y", "15Y", "20Y", "25Y", "30Y",
     #     ]
-    points2D = np.column_stack((x, y))
-    tri = scipy.spatial.Delaunay(points2D)
 
-    fig = go.Figure(data=[go.Mesh3d(
-        x=x,
-        y=y,
-        z=z,
-        i=tri.simplices[:, 0],
-        j=tri.simplices[:, 1],
-        k=tri.simplices[:, 2],
+    # points2D = np.column_stack((x, y))
+    # tri = scipy.spatial.Delaunay(points2D)
+
+    # fig = go.Figure(data=[go.Mesh3d(
+    #     x=x,
+    #     y=y,
+    #     z=z,
+    #     i=tri.simplices[:, 0],
+    #     j=tri.simplices[:, 1],
+    #     k=tri.simplices[:, 2],
+    #     colorscale='Viridis',
+    #     intensity=z,
+    #     colorbar=dict(
+    #         title="Vol",
+    #         tickformat=".0%", # Format as percentage
+    #     ),
+    #     opacity=0.9,
+    #     flatshading=True
+    # )])
+
+    x_grid = np.unique(x)
+    z_list = []
+    y_list = []
+    for t, group in volsurface.groupby('TTM'):
+        group = group.sort_values('Strike')
+        if len(group) >= 2:
+            f = interp1d(group['Strike'], group['Vol'], kind="linear", bounds_error=False, fill_value=np.nan)
+            z_interp = f(x_grid)
+            z_list.append(z_interp)
+            y_list.append(np.full_like(x_grid, fill_value=t))
+
+    Z_grid = np.vstack(z_list)
+    Y_grid = np.array(sorted(np.unique(y)))
+    X_grid = x_grid
+
+    fig = go.Figure(data=go.Surface(
+        x=X_grid,
+        y=Y_grid,
+        z=Z_grid,
         colorscale='Viridis',
-        intensity=z,
-        colorbar=dict(
-            title="Vol",
-            tickformat=".0%", # Format as percentage
-        ),
-        opacity=0.9,
-        flatshading=True
-    )])
+    ))
+
+    if show_arbitrage_point:
+        arb_points = volsurface.dropna(subset=["Arbitrage"])
+        # call spread arbitrage
+        df_cs_arb = arb_points[arb_points["Arbitrage"].str.contains("CS", na=False)]
+        x_cs = df_cs_arb['Strike'].values
+        y_cs = df_cs_arb['TTM'].values
+        z_cs = df_cs_arb['Vol'].values
+        fig.add_trace(go.Scatter3d(
+            x=x_cs,
+            y=y_cs,
+            z=z_cs,
+            mode='markers+text',
+            marker=dict(size=2, color='yellow', symbol='circle', opacity=0.6),
+            textposition="top center",
+            name="Call spread arbitrage"
+        ))
+        # butterfly arbitrage
+        df_bf_arb = arb_points[arb_points["Arbitrage"].str.contains("BF", na=False)]
+        x_bf = df_bf_arb['Strike'].values
+        y_bf = df_bf_arb['TTM'].values
+        z_bf = df_bf_arb['Vol'].values
+        fig.add_trace(go.Scatter3d(
+            x=x_bf,
+            y=y_bf,
+            z=z_bf,
+            mode='markers+text',
+            marker=dict(size=1, color='cyan', symbol='square', opacity=0.6),
+            textposition="top center",
+            name="Butterfly arbitrage"
+        ))
+        # calendar arbitrage
+        df_cal_arb = arb_points[arb_points["Arbitrage"].str.contains("CA", na=False)]
+        x_ca = df_cal_arb['Strike'].values
+        y_ca = df_cal_arb['TTM'].values
+        z_ca = df_cal_arb['Vol'].values
+        fig.add_trace(go.Scatter3d(
+            x=x_ca,
+            y=y_ca,
+            z=z_ca,
+            mode='markers+text',
+            marker=dict(size=2, color='red', symbol='circle', opacity=0.6),
+            textposition="top center",
+            name="Calendar arbitrage"
+        ))
+
     fig.update_layout(
         scene=dict(
             xaxis=dict(title="Strike"),
             yaxis=dict(title="T (years)"),
-            zaxis=dict(title="Vol", tickformat=".0%"),
+            zaxis=dict(title="Vol", tickformat=".0%", range=[z.min(), z.max()]),
         ),
         margin=dict(l=20, r=20, t=50, b=20)
         )
