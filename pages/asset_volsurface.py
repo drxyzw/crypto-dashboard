@@ -61,31 +61,12 @@ def update_output(selected_date_str):
     y = volsurface['TTM'].values
     z = volsurface['Vol'].values
 
-    # volsurface_pivot = volsurface.pivot(index='TTM', columns='Strike', values='Vol')
-    # z = volsurface_pivot.values
-    # x = volsurface_pivot.columns.values
-    # y = volsurface_pivot.index.values
-
-    # X, Y = np.meshgrid(x, y)
-    # # tenors = [
-    # #     "1D", "1W", "2W", "1M", "2M", "3M", "6M", "9M",
-    # #     "1Y", "15M", "18M", "2Y", "3Y", "5Y",
-    # #     # "7Y", "10Y",
-    # #     # "12Y", "15Y", "20Y", "25Y", "30Y",
-    # #     ]
-    # # cal = UKorUSCalendar()
-    # # tenor_dates = [cal.advance(selected_date_ql, ql.Period(tenor)) for tenor in tenors]
-    # # tenor_dates_str = [d.to_date().strftime("%Y-%m-%d") for d in tenor_dates]
-    # fig = go.Figure(data=[go.Surface(z=z, x=X, y=Y)])
-    # fig.update_layout(title = dict(text="BTC/USD Volatility Surface"),
-    #                   margin=dict(l=20, r=20, t=50, b=20))
-    # fig.update_layout(
-    #     scene=dict(
-    #         xaxis=dict(title="Strike", range=[x.min(), x.max()]),
-    #         yaxis=dict(title="T", range=[y.min(), y.max()]),
-    #         zaxis=dict(title="Vol"),
-    #     )
-    # )
+    # tenors = [
+    #     "1D", "1W", "2W", "1M", "2M", "3M", "6M", "9M",
+    #     "1Y", "15M", "18M", "2Y", "3Y", "5Y",
+    #     # "7Y", "10Y",
+    #     # "12Y", "15Y", "20Y", "25Y", "30Y",
+    #     ]
     points2D = np.column_stack((x, y))
     tri = scipy.spatial.Delaunay(points2D)
 
