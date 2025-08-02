@@ -74,40 +74,38 @@ def update_output(selected_date_str, arbitrage_checklist_value):
     #     # "12Y", "15Y", "20Y", "25Y", "30Y",
     #     ]
 
-    # points2D = np.column_stack((x, y))
-    # tri = scipy.spatial.Delaunay(points2D)
-
-    # fig = go.Figure(data=[go.Mesh3d(
-    #     x=x,
-    #     y=y,
-    #     z=z,
-    #     i=tri.simplices[:, 0],
-    #     j=tri.simplices[:, 1],
-    #     k=tri.simplices[:, 2],
-    #     colorscale='Viridis',
-    #     intensity=z,
-    #     colorbar=dict(
-    #         title="Vol",
-    #         tickformat=".0%", # Format as percentage
-    #     ),
-    #     opacity=0.9,
-    #     flatshading=True
-    # )])
-
-    x_grid = np.unique(x)
     z_list = []
-    y_list = []
-    for t, group in volsurface.groupby('TTM'):
+    y_grid = []
+    x_grid = np.unique(x)
+    for t, group in sorted(volsurface.groupby('TTM')):
         group = group.sort_values('Strike')
         if len(group) >= 2:
             f = interp1d(group['Strike'], group['Vol'], kind="linear", bounds_error=False, fill_value=np.nan)
             z_interp = f(x_grid)
             z_list.append(z_interp)
-            y_list.append(np.full_like(x_grid, fill_value=t))
+            y_grid.append(t)
+
+    # make datapoints of (strike, TTM_i) for all strikes and certain i if adjacent (strike, TTM_i+1) and (strike, TTM_i-1) are nan
+    # this is typically happens shortend monthly options where weekly options are available.
+    i_y = 0
+    for i_x in range(len(x_grid)):
+        if (not pd.isna(z_list[i_y][i_x])) and pd.isna(z_list[i_y + 1][i_x]):
+            z_list[i_y][i_x] = np.nan
+
+    for i_y in range(1, len(y_grid) - 2):
+        for i_x in range(len(x_grid)):
+            if (not pd.isna(z_list[i_y][i_x])) and pd.isna(z_list[i_y - 1][i_x]) and pd.isna(z_list[i_y + 1][i_x]):
+                z_list[i_y][i_x] = np.nan
+
+    i_y = len(y_grid) - 1
+    for i_x in range(len(x_grid)):
+        if (not pd.isna(z_list[i_y][i_x])) and pd.isna(z_list[i_y - 1][i_x]):
+            z_list[i_y][i_x] = np.nan
+            
 
     Z_grid = np.vstack(z_list)
-    Y_grid = np.array(sorted(np.unique(y)))
     X_grid = x_grid
+    Y_grid = y_grid
 
     fig = go.Figure(data=go.Surface(
         x=X_grid,
@@ -156,7 +154,7 @@ def update_output(selected_date_str, arbitrage_checklist_value):
             y=y_ca,
             z=z_ca,
             mode='markers+text',
-            marker=dict(size=2, color='red', symbol='circle', opacity=0.6),
+            marker=dict(size=3, color='red', symbol='circle', opacity=0.6),
             textposition="top center",
             name="Calendar arbitrage"
         ))
