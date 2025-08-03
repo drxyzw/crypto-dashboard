@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, callback, Input, Output, dash_table
+from dash import html, dcc, callback, Input, Output, dash_table, State
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
@@ -47,13 +47,30 @@ layout = html.Div([
                 ),
     ]),
 ])
+
+@callback(
+    Output("volsurface-chart-container", "figure", allow_duplicate=True),
+    Input("arbitrage-checklist", "value"),
+    State("volsurface-chart-container", "figure"),
+    prevent_initial_call=True,
+)
+def toggle_arbitrage_points(arbitrage_checklist_value, fig):
+    if not fig is None:
+        show_arbitrage_point = len(arbitrage_checklist_value) > 0
+        opacity = 0.6 if show_arbitrage_point else 0.
+        for i in range(len(fig["data"])):
+            if("name" in fig["data"][i]
+               and not fig["data"][i]["name"] is None
+               and "arbitrage" in fig["data"][i]["name"]):
+                fig["data"][i]["marker"]['opacity'] = opacity
+    return fig
+
 @callback(
     Output("volsurface-chart-container", "figure"),
     Input("date-selector", "value"),
-    Input("arbitrage-checklist", "value"),
+    State("arbitrage-checklist", "value"),
 )
 def update_output(selected_date_str, arbitrage_checklist_value):
-    show_arbitrage_point = len(arbitrage_checklist_value) > 0
     selected_date_py = dt.strptime(selected_date_str, "%Y-%m-%d")
     selected_date_ql = YYYYMMDDHyphenToQlDate(selected_date_str)
     mkt_object_names = ['BTCUSD.VOLSURFACE']
@@ -114,50 +131,55 @@ def update_output(selected_date_str, arbitrage_checklist_value):
         colorscale='Viridis',
     ))
 
-    if show_arbitrage_point:
-        arb_points = volsurface.dropna(subset=["Arbitrage"])
-        # call spread arbitrage
-        df_cs_arb = arb_points[arb_points["Arbitrage"].str.contains("CS", na=False)]
-        x_cs = df_cs_arb['Strike'].values
-        y_cs = df_cs_arb['TTM'].values
-        z_cs = df_cs_arb['Vol'].values
-        fig.add_trace(go.Scatter3d(
-            x=x_cs,
-            y=y_cs,
-            z=z_cs,
-            mode='markers+text',
-            marker=dict(size=2, color='yellow', symbol='circle', opacity=0.6),
-            textposition="top center",
-            name="Call spread arbitrage"
-        ))
-        # butterfly arbitrage
-        df_bf_arb = arb_points[arb_points["Arbitrage"].str.contains("BF", na=False)]
-        x_bf = df_bf_arb['Strike'].values
-        y_bf = df_bf_arb['TTM'].values
-        z_bf = df_bf_arb['Vol'].values
-        fig.add_trace(go.Scatter3d(
-            x=x_bf,
-            y=y_bf,
-            z=z_bf,
-            mode='markers+text',
-            marker=dict(size=1, color='cyan', symbol='square', opacity=0.6),
-            textposition="top center",
-            name="Butterfly arbitrage"
-        ))
-        # calendar arbitrage
-        df_cal_arb = arb_points[arb_points["Arbitrage"].str.contains("CA", na=False)]
-        x_ca = df_cal_arb['Strike'].values
-        y_ca = df_cal_arb['TTM'].values
-        z_ca = df_cal_arb['Vol'].values
-        fig.add_trace(go.Scatter3d(
-            x=x_ca,
-            y=y_ca,
-            z=z_ca,
-            mode='markers+text',
-            marker=dict(size=3, color='red', symbol='circle', opacity=0.6),
-            textposition="top center",
-            name="Calendar arbitrage"
-        ))
+    arb_points = volsurface.dropna(subset=["Arbitrage"])
+    # call spread arbitrage
+    df_cs_arb = arb_points[arb_points["Arbitrage"].str.contains("CS", na=False)]
+    x_cs = df_cs_arb['Strike'].values
+    y_cs = df_cs_arb['TTM'].values
+    z_cs = df_cs_arb['Vol'].values
+    fig.add_trace(go.Scatter3d(
+        x=x_cs,
+        y=y_cs,
+        z=z_cs,
+        mode='markers+text',
+        marker=dict(size=2, color='yellow', symbol='circle', opacity=0.6),
+        textposition="top center",
+        name="Call spread arbitrage",
+        visible=True,
+        # showlegend=True,
+    ))
+    # butterfly arbitrage
+    df_bf_arb = arb_points[arb_points["Arbitrage"].str.contains("BF", na=False)]
+    x_bf = df_bf_arb['Strike'].values
+    y_bf = df_bf_arb['TTM'].values
+    z_bf = df_bf_arb['Vol'].values
+    fig.add_trace(go.Scatter3d(
+        x=x_bf,
+        y=y_bf,
+        z=z_bf,
+        mode='markers+text',
+        marker=dict(size=1, color='cyan', symbol='square', opacity=0.6),
+        textposition="top center",
+        name="Butterfly arbitrage",
+        visible=True,
+        # showlegend=True,
+    ))
+    # calendar arbitrage
+    df_cal_arb = arb_points[arb_points["Arbitrage"].str.contains("CA", na=False)]
+    x_ca = df_cal_arb['Strike'].values
+    y_ca = df_cal_arb['TTM'].values
+    z_ca = df_cal_arb['Vol'].values
+    fig.add_trace(go.Scatter3d(
+        x=x_ca,
+        y=y_ca,
+        z=z_ca,
+        mode='markers+text',
+        marker=dict(size=3, color='red', symbol='circle', opacity=0.6),
+        textposition="top center",
+        name="Calendar arbitrage",
+        visible=True,
+        # showlegend=True,
+    ))
 
     fig.update_layout(
         scene=dict(
@@ -165,7 +187,9 @@ def update_output(selected_date_str, arbitrage_checklist_value):
             yaxis=dict(title="T (years)"),
             zaxis=dict(title="Vol", tickformat=".0%", range=[z.min(), z.max()]),
         ),
-        margin=dict(l=20, r=20, t=50, b=20)
+        margin=dict(l=20, r=20, t=50, b=20),
+        legend_orientation="h",
         )
+    fig = toggle_arbitrage_points(arbitrage_checklist_value, fig)
     return fig #, funding_table, funding_fig
 
