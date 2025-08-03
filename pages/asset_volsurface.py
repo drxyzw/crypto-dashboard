@@ -36,6 +36,22 @@ layout = html.Div([
     html.Div([
         dcc.Dropdown(id="date-selector", options = dateList, value = dateList[0]),
     ], style=CONTENT_STYLE),
+    dcc.RangeSlider(id="strike_slider",
+                    min=0,
+                    max=400000,
+                    step=50000,
+                    value=[0, 400000]),
+    dcc.RangeSlider(id="t_slider",
+                    min=0.,
+                    max=2.,
+                    step=0.5,
+                    value=[0., 2.]),
+    dcc.RangeSlider(id="vol_slider",
+                    min=0.,
+                    max=2.,
+                    step=0.2,
+                    value=[0., 1.],
+                    marks={v: str(int(v*100))+"%" for v in [0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2]}),
     dcc.Checklist(id="arbitrage-checklist",
                   options=["Show arbitrage point"],
                   value=[]),
@@ -66,20 +82,48 @@ def toggle_arbitrage_points(arbitrage_checklist_value, fig):
     return fig
 
 @callback(
-    Output("volsurface-chart-container", "figure"),
-    Input("date-selector", "value"),
-    State("arbitrage-checklist", "value"),
+    Output("volsurface-chart-container", "figure", allow_duplicate=True),
+    # Output("vol_slider", "max"),
+    Input("strike_slider", "value"),
+    Input("t_slider", "value"),
+    Input("vol_slider", "value"),
+    State("volsurface-chart-container", "figure"),
+    prevent_initial_call=True,
 )
-def update_output(selected_date_str, arbitrage_checklist_value):
-    selected_date_py = dt.strptime(selected_date_str, "%Y-%m-%d")
-    selected_date_ql = YYYYMMDDHyphenToQlDate(selected_date_str)
-    mkt_object_names = ['BTCUSD.VOLSURFACE']
-    # market = loadMarket(selected_date_py, names=mkt_object_names)
-    # volsurface = market[mkt_object_names[0]]
-    YYYYMMDD = selected_date_py.strftime("%Y%m%d")
-    PROCESSED_DIR = "./data_processed"
-    volsurface_file = PROCESSED_DIR + "/" + YYYYMMDD + "/" + "BTCUSDVOLSURFACE_" + YYYYMMDD + ".xlsx"
-    volsurface = pd.read_excel(volsurface_file)
+def update_chart_range(strike_slider_value, t_slider_value, vol_slider_value, fig):
+    if not fig is None:
+        fig['layout']['scene']['xaxis']['range'] = strike_slider_value
+        fig['layout']['scene']['yaxis']['range'] = t_slider_value
+        fig['layout']['scene']['zaxis']['range'] = vol_slider_value
+        # find max vol in the ranges of x and y
+        # xs = {k: v for k, v in fig['data'][0]['x']['_inputArray'].items() if k.isnumeric()}
+        # minx = strike_slider_value[0]
+        # maxx = strike_slider_value[1]
+        # maxz = 0.
+        # for i_y, y in enumerate(fig['data'][0]['y']):
+        #     if t_slider_value[0] <= y and y <= t_slider_value[1]:
+        #         vol_smile = fig['data'][0]['z']['_inputArray'][i_y]
+        #         selected_vol_smile = [vol_smile[i_x] for i_x, x in xs.items() if minx <= x and x <= maxx]
+        #         selected_vol_smile = np.array(selected_vol_smile, dtype=float)
+        #         maxz = max(maxz, np.nanmax(selected_vol_smile))
+        # cmax = min(maxz, vol_slider_value[1])
+        fig = go.Figure(fig)
+
+        new_trace = go.Surface(
+        x=fig.data[0].x,
+        y=fig.data[0].y,
+        z=fig.data[0].z,
+        colorscale='Viridis',
+        cmin=vol_slider_value[0],
+        cmax=vol_slider_value[1],
+        colorbar=dict(tickformat=".0%"),
+        name="volsurface")
+        fig.update_traces(new_trace, selector=dict(name="volsurface"))
+
+    return fig
+
+def displayChart(volsurface, arbitrage_checklist_value, strike_sllider_value, t_sllider_value, vol_sllider_value,
+                 k_range = None, t_range = None, vol_range = None):
     x = volsurface['Strike'].values
     y = volsurface['TTM'].values
     z = volsurface['Vol'].values
@@ -118,7 +162,6 @@ def update_output(selected_date_str, arbitrage_checklist_value):
     for i_x in range(len(x_grid)):
         if (not pd.isna(z_list[i_y][i_x])) and pd.isna(z_list[i_y - 1][i_x]):
             z_list[i_y][i_x] = np.nan
-            
 
     Z_grid = np.vstack(z_list)
     X_grid = x_grid
@@ -129,6 +172,10 @@ def update_output(selected_date_str, arbitrage_checklist_value):
         y=Y_grid,
         z=Z_grid,
         colorscale='Viridis',
+        name="volsurface",
+        cmin=vol_sllider_value[0],
+        cmax=vol_sllider_value[1],
+        colorbar=dict(tickformat=".0%"),
     ))
 
     arb_points = volsurface.dropna(subset=["Arbitrage"])
@@ -183,13 +230,38 @@ def update_output(selected_date_str, arbitrage_checklist_value):
 
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title="Strike"),
-            yaxis=dict(title="T (years)"),
-            zaxis=dict(title="Vol", tickformat=".0%", range=[z.min(), z.max()]),
+            xaxis=dict(title="Strike", range=strike_sllider_value),
+            yaxis=dict(title="T (years)", range=t_sllider_value),
+            zaxis=dict(title="Vol", tickformat=".0%", range=vol_sllider_value),
         ),
         margin=dict(l=20, r=20, t=50, b=20),
         legend_orientation="h",
         )
     fig = toggle_arbitrage_points(arbitrage_checklist_value, fig)
-    return fig #, funding_table, funding_fig
+    return fig
+
+@callback(
+    Output("volsurface-chart-container", "figure"),
+    Output("vol_slider", "max"),
+    Input("date-selector", "value"),
+    State("arbitrage-checklist", "value"),
+    State("strike_slider", "value"),
+    State("t_slider", "value"),
+    State("vol_slider", "value"),
+)
+def update_output(selected_date_str, arbitrage_checklist_value, strike_sllider_value, t_sllider_value, vol_sllider_value):
+    selected_date_py = dt.strptime(selected_date_str, "%Y-%m-%d")
+    selected_date_ql = YYYYMMDDHyphenToQlDate(selected_date_str)
+    mkt_object_names = ['BTCUSD.VOLSURFACE']
+    # market = loadMarket(selected_date_py, names=mkt_object_names)
+    # volsurface = market[mkt_object_names[0]]
+    YYYYMMDD = selected_date_py.strftime("%Y%m%d")
+    PROCESSED_DIR = "./data_processed"
+    volsurface_file = PROCESSED_DIR + "/" + YYYYMMDD + "/" + "BTCUSDVOLSURFACE_" + YYYYMMDD + ".xlsx"
+    volsurface = pd.read_excel(volsurface_file)
+
+    max_vol = min(2., np.nanmax(volsurface['Vol'].values))
+
+    fig = displayChart(volsurface, arbitrage_checklist_value, strike_sllider_value, t_sllider_value, vol_sllider_value)
+    return fig, max_vol #, funding_table, funding_fig
 
