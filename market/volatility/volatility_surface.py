@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 from sklearn.linear_model import LinearRegression
+from scipy.optimize import minimize
 
 from utils.convention import *
 PROCESSED_DIR = "./data_processed"
@@ -59,6 +60,10 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
 
     df_data = pd.merge(df_data, df_pivot, on=['ExpiryDate', 'FutureExpiryDate', 'Strike'])
 
+    df_data['Computed_slope'] = None
+    df_data['Computed_curvature'] = None
+    df_data['Computed_dCurvature'] = None
+
     for expiryDate in df_data['ExpiryDate'].unique():
         qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
         if qlExpiryDate <= marketDate:
@@ -85,6 +90,7 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
             masked_strikes = [float(v) for v in df_data.loc[mask, "Strike"].values]
             masked_calls = [float(v) for v in df_data.loc[mask, "CallPrice"].values]
             masked_puts = [float(v) for v in df_data.loc[mask, "PutPrice"].values]
+            # take average on time value between call and put
             df_data.loc[mask, "Price"] = np.where(df_data.loc[mask, "OptionType"] == "Call",
                                             np.where(f >= masked_strikes,
                                                 ((masked_calls - (f - masked_strikes)*domDfOption) + masked_puts) * .5
@@ -94,6 +100,83 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
                                                 ((masked_calls - (f - masked_strikes)*domDfOption) + masked_puts) * .5,
                                                 (masked_calls + (masked_puts - (masked_strikes - f)*domDfOption)) * .5
                                                  + (masked_strikes - f)*domDfOption))
+
+            # further, apply smoothing on price
+            # p(k) = p0(k) + d(k)
+            # by minimizing L
+            # L = \sum_i [(p(k_i) - p(k_{i+1}))^2 + d(k_i)^2/sp^2]
+            def loss(dP, prices, strikes, cp, f, domDfOption):
+                spread = 5.
+                dP = np.array(dP)
+                dP[0] = 0.
+                dP[-1] = 0.
+                undisc_price = (prices + dP) / domDfOption
+                intrinsic = np.max(f-strikes, 0) if cp == ql.Option.Call else np.max(strikes - f)
+                intrinsicPenalty = np.maximum((intrinsic - undisc_price) / strikes, 0.)**2
+
+                slopes = np.diff(undisc_price) / np.diff(strikes)
+                # diff = (slopes) ** 2
+                ave_strikes = 0.5 * (strikes[:-1] + strikes[1:])
+                curvatures = np.diff(slopes) / np.diff(ave_strikes)
+                # diff = (curvatures) ** 2
+                ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
+                dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
+                diff = (dCurvatures) ** 2
+                reg = (dP / spread) ** 2
+                loss_value = 100.*np.sum(diff) + np.sum(reg) + 100. * np.sum(intrinsicPenalty)
+                return loss_value
+
+            # def smooth_price(x, y, coeff_grad):
+            #     n = len(x)
+            #     A = np.zeros((n, n))
+            #     price_unit = 5.
+            #     l = 1. / price_unit**2
+
+            #     b = y.copy() * l
+            #     for i in range(n):
+            #         A[i, i] += l
+                
+            #     for i in range(1, (n-2) + 1):
+            #         dx_m = x[i] - x[i-1]
+            #         dx = x[i+1] - x[i]
+            #         w_m = coeff_grad / (dx_m**2)
+            #         w = coeff_grad / (dx**2)
+            #         A[i, i] += w + w_m
+            #         A[i-1, i] -= w_m
+            #         A[i, i+1] -= w
+            #     z = np.linalg.solve(A, b)
+            #     return z
+
+            mask_call = mask & (df_data["OptionType"] == "Call")
+            callPrices = df_data.loc[mask_call, "Price"].values
+            callStrikes = np.array([float(v) for v in df_data.loc[mask_call, "Strike"].values])
+            dCallPrices0 = 10. * np.random.rand(len(callStrikes)) - 5.
+            # dCallPrices0 = np.zeros_like(callPrices)
+            dCallPrices = minimize(loss, dCallPrices0, args=(callPrices, callStrikes, ql.Option.Call, f.values[0], domDfOption.values[0]))
+            # dCallPrices = minimize(loss, dCallPrices0, method="L-BFGS-B", args=(callPrices, callStrikes))
+            callPrices = callPrices + dCallPrices.x
+            # callPrices = smooth_price(callStrikes, callPrices, coeff_grad=1.)
+            df_data.loc[mask_call, "Price"] = callPrices
+
+            slopes = np.diff(callPrices) / np.diff(callStrikes)
+            # diff = (slopes) ** 2
+            ave_strikes = 0.5 * (callStrikes[:-1] + callStrikes[1:])
+            curvatures = np.diff(slopes) / np.diff(ave_strikes)
+            # diff = (curvatures) ** 2
+            ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
+            dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
+            df_data.loc[mask_call, 'Computed_slope'] = list(slopes) + [0.]
+            df_data.loc[mask_call, 'Computed_curvature'] = list(curvatures) + [0.] * 2 
+            df_data.loc[mask_call, 'Computed_dCurvature'] = list(dCurvatures) + [0.] * 3 
+
+            mask_put = mask & (df_data["OptionType"] == "Put")
+            putPrices = df_data.loc[mask_put, "Price"].values
+            putStrikes = np.array([float(v) for v in df_data.loc[mask_put, "Strike"].values])
+            dPutPrices0 = np.zeros_like(putPrices)
+            dPutPrices = minimize(loss, dPutPrices0, method="L-BFGS-B", args=(putPrices, putStrikes, ql.Option.Put, f.values[0], domDfOption.values[0]))
+            putPrices = putPrices + dPutPrices.x
+            # putPrices = smooth_price(putStrikes, putPrices, coeff_grad=1.)
+            df_data.loc[mask_put, "Price"] = putPrices
 
     return df_data
 
@@ -205,11 +288,48 @@ def checkFuture(df_data, marketDate, domYc, assetYc, asset_spot):
                 else:
                     print(message)
             
-def arbitrageCheck(row, domDfOption, optionType):
+# def arbitrageCheck(row, domDfOption, optionType):
+#     prices = row["Price"].values / domDfOption
+#     ks = row["Strike"].values
+#     flags = [set() for _ in range(len(ks))]
+#     slopes = [0.] * len(ks)
+#     curvatures = [0.] * len(ks)
+
+#     for i in range(len(ks)-1):
+#         slope = (prices[i+1] - prices[i]) / (ks[i+1] - ks[i])
+#         slopes[i] = slope
+
+#     for i in range(1, len(ks)-1):
+#         if ((optionType == "Call" and (slopes[i-1] <= -1. or 0. <= slopes[i-1])) or
+#             (optionType == "Put" and (slopes[i-1] <= 0. or 1. <= slopes[i-1]))):
+#             if ((optionType == "Call" and (slopes[i] <= -1. or 0. <= slopes[i])) or
+#             (optionType == "Put" and (slopes[i] <= 0. or 1. <= slopes[i]))):
+#                 flags[i].add("CS")
+#             else:
+#                 flags[i-1].add("CS")
+
+#     for i in range(1, len(ks)-2):
+#         slope_m = slopes[i-1]
+#         slope_p = slopes[i]
+#         k_m = (ks[i] + ks[i-1]) * .5
+#         k_p = (ks[i+1] + ks[i]) * .5
+#         curvatures[i] = (slope_p - slope_m) / (k_p - k_m)
+#         if curvatures[i] < 0.:
+#             flags[i].add("BF")
+
+#     for i in range(len(ks)):
+#         flags[i] = ",".join(flags[i])
+        
+#     return flags
+    
+def arbitrageCheckSlopeCurvature(row, domDfOption, optionType):
     prices = row["Price"].values / domDfOption
+    
     ks = row["Strike"].values
     flags = [set() for _ in range(len(ks))]
+    flags_concat = [None] * len(ks)
     slopes = [0.] * len(ks)
+    curvatures = [0.] * len(ks)
 
     for i in range(len(ks)-1):
         slope = (prices[i+1] - prices[i]) / (ks[i+1] - ks[i])
@@ -224,16 +344,28 @@ def arbitrageCheck(row, domDfOption, optionType):
             else:
                 flags[i-1].add("CS")
 
-        if not slopes[i-1] < slopes[i]:
+    for i in range(1, len(ks)-2):
+        slope_m = slopes[i-1]
+        slope_p = slopes[i]
+        k_m = (ks[i] + ks[i-1]) * .5
+        k_p = (ks[i+1] + ks[i]) * .5
+        curvatures[i] = (slope_p - slope_m) / (k_p - k_m)
+        if curvatures[i] < 0.:
             flags[i].add("BF")
 
     for i in range(len(ks)):
-        flags[i] = ",".join(flags[i])
-        
-    return flags
+        if len(flags[i]) > 0:
+            flags_concat[i] = ",".join(flags[i])
+    
+    row=row.copy()
+    row['Arbitrage'] = flags_concat
+    row['Slope'] = slopes
+    row['Curvature'] = curvatures
+
+    return row
     
 def checkCalendarArbitrageOnVolatility(row, df_smile_obj):
-    if row['Arbitrage'] == '':
+    if pd.isna(row['Arbitrage']) or row['Arbitrage'] == '':
         arb_flags = set()
     else:
         arb_flags = set(row['Arbitrage'].split(","))
@@ -286,7 +418,7 @@ def checkCalendarArbitrageOnVolatility(row, df_smile_obj):
         return row['Arbitrage']
 
 def checkCalendarArbitrageOnPrice(row, df_price):
-    if pd.isna(row['Arbitrage']):
+    if pd.isna(row['Arbitrage']) or row['Arbitrage'] == "":
         arb_flags = set()
     else:
         arb_flags = set(row['Arbitrage'].split(","))
@@ -413,6 +545,9 @@ def build_volatility_surface(market_dict):
                                          asset_spot = asset_spot)
 
     df_data.dropna(subset=["ImpliedVol"], inplace=True)
+    df_data["Arbitrage"] = None
+    df_data["Slope"] = None
+    df_data["Curvature"] = None
 
     dfs_smile = []
     dfs_smile_obj = []
@@ -439,36 +574,44 @@ def build_volatility_surface(market_dict):
                 f = spotPrice * assetDfUnderlying / domDfUnderlying
                 
             # arbitrage check along strike
-            df_data["Arbitrage"] = None
             mask_call = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
             while True: # continue arbitrage check until no arbitrage is left
-                last_nb_call_non_arb = len(mask_call)
-                df_data.loc[mask_call, "Arbitrage"] = arbitrageCheck(df_data[mask_call], domDfOption, "Call")
+                last_call_non_arb = mask_call
+                # df_data.loc[mask_call, "Arbitrage"] = arbitrageCheck(df_data[mask_call], domDfOption, "Call")
+                df_data[mask_call] = arbitrageCheckSlopeCurvature(df_data[mask_call], domDfOption, "Call")
                 mask_call = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
-                nb_call_non_arb = len(mask_call)
-                if last_nb_call_non_arb == nb_call_non_arb:
+                if all(last_call_non_arb.values == mask_call.values):
                     break
 
             mask_put = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
             while True: # continue arbitrage check until no arbitrage is left
-                last_nb_put_non_arb = len(mask_put)
-                df_data.loc[mask_put, "Arbitrage"] = arbitrageCheck(df_data[mask_put], domDfOption, "Put")
+                last_put_non_arb = mask_put
+                # df_data.loc[mask_put, "Arbitrage"] = arbitrageCheck(df_data[mask_put], domDfOption, "Put")
+                df_data[mask_put] = arbitrageCheckSlopeCurvature(df_data[mask_put], domDfOption, "Put")
                 mask_put = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
-                nb_put_non_arb = len(mask_put)
-                if last_nb_put_non_arb == nb_put_non_arb:
+                if all(last_put_non_arb.values == mask_put.values):
                     break
 
             mask_call = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                         & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
+            df_data[mask_call] = arbitrageCheckSlopeCurvature(df_data[mask_call], domDfOption, "Call")
+            mask_call = ((df_data['ExpiryDate'] == expiryDate)
+                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Call"))
+
+            mask_put = ((df_data['ExpiryDate'] == expiryDate)
+                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                         & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
+            df_data[mask_put] = arbitrageCheckSlopeCurvature(df_data[mask_put], domDfOption, "Put")
             mask_put = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Put"))
