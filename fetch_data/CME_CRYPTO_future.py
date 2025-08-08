@@ -10,123 +10,133 @@ import os
 import shutil
 import pandas as pd
 
+BASE_FUTURE_URL = {
+    "BTC": "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.html",
+    "ETH": "https://www.cmegroup.com/markets/cryptocurrencies/ether/ether.settlements.html",
+}
+
 # Plan
 # 1. Load latest data if existss. Get dates
 # 2. From website, only fetch dates which are not covered in latest file #1
 # 3. Export #1 and #2 to OUTPUT file with file name the latest timestamp
 # 4. Copy #4 to overwrite the latest file
 
-DIR = "./data_raw"
-LATEST_FILE = "CME_BTC_Future_latest.xlsx"
-latest_full_path = DIR + "/" + LATEST_FILE
+def fetch_CME_crypto_futures(assetName):
+    DIR = "./data_raw"
+    LATEST_FILE = f"CME_{assetName}_Future_latest.xlsx"
+    latest_full_path = DIR + "/" + LATEST_FILE
 
-RETRY_TIMES = 5
+    RETRY_TIMES = 5
 
-existing_dates = []
-df_latest = None
-if os.path.exists(latest_full_path):
-    df_latest = pd.read_excel(latest_full_path)
-    existing_dates_str = df_latest["Date"]
-    existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%d").unique()
-    # existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%dT%H:%M:%S").unique()
+    existing_dates = []
+    df_latest = None
+    if os.path.exists(latest_full_path):
+        df_latest = pd.read_excel(latest_full_path)
+        existing_dates_str = df_latest["Date"]
+        existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%d").unique()
+        # existing_dates = pd.to_datetime(existing_dates_str, format="%Y-%m-%dT%H:%M:%S").unique()
 
-loadDate = dt.now().isoformat().replace(":", "")
-loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
-OUTPUT_FILE = "CME_BTC_Future_" + loadDate + ".xlsx"
+    loadDate = dt.now().isoformat().replace(":", "")
+    loadDate=loadDate[:17] # YYYY-MM-DDTHHMMSS
+    OUTPUT_FILE = f"CME_{assetName}_Future_{loadDate}.xlsx"
 
-url_base = "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.html"
+    url_base = BASE_FUTURE_URL[assetName]
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-# options.add_argument("headless")
-# options.add_argument("disable-gui")
+    options = webdriver.ChromeOptions()
+    options.add_experimental_option("detach", False)
+    # options.add_argument("headless")
+    # options.add_argument("disable-gui")
 
-driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(options=options)
 
-dates = []
-expiries = []
+    dates = []
+    expiries = []
 
-opens = []
-highs = []
-lows = []
-lasts = []
-changes = []
-settles = []
-estimated_volumes = []
-prior_day_ois = [] # open interest
-dfs = [] if df_latest is None else [df_latest]
+    opens = []
+    highs = []
+    lows = []
+    lasts = []
+    changes = []
+    settles = []
+    estimated_volumes = []
+    prior_day_ois = [] # open interest
+    dfs = [] if df_latest is None else [df_latest]
 
-# get date list
-driver.get(url_base)
-ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
-labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
-DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
-DateChoices.sort() # sort by ascending order
+    # get date list
+    driver.get(url_base)
+    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
+    labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
+    DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
+    DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
+    DateChoices.sort() # sort by ascending order
 
-# extract only new dates (not included in file)
-DateChoices = [dc for dc in DateChoices if dc not in existing_dates]
+    # extract only new dates (not included in file)
+    DateChoices = [dc for dc in DateChoices if dc not in existing_dates]
 
-if len(DateChoices) > 0:
-    # for d in range(DAYS_BACK + 1):
-    for i_date, evalDate in enumerate(DateChoices):
-        dd = f'{evalDate.day:02d}'
-        mm = f'{evalDate.month:02d}'
-        yyyy = f'{evalDate.year:04d}'
-        url_date = url_base + f'#tradeDate={mm}%2F{dd}%2F{yyyy}'
-        retries = 0
-        while retries <= RETRY_TIMES:
-            try:
-                driver.get(url_date)
-                driver.refresh()
-                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-                break
-            except Exception as e:
-                retries += 1
+    if len(DateChoices) > 0:
+        # for d in range(DAYS_BACK + 1):
+        for i_date, evalDate in enumerate(DateChoices):
+            dd = f'{evalDate.day:02d}'
+            mm = f'{evalDate.month:02d}'
+            yyyy = f'{evalDate.year:04d}'
+            url_date = url_base + f'#tradeDate={mm}%2F{dd}%2F{yyyy}'
+            retries = 0
+            while retries <= RETRY_TIMES:
+                try:
+                    driver.get(url_date)
+                    driver.refresh()
+                    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                    break
+                except Exception as e:
+                    retries += 1
 
-        trs = driver.execute_script(
-            """
-            const rows = document.querySelectorAll(".main-table-wrapper table tbody tr");
-            return Array.from(rows).map(row =>
-                Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
-            );
-            """)
-        for tds in trs:
-            dates.append(dt.strftime(evalDate, "%Y-%m-%d"))
-            expiries.append(tds[0])
-            opens.append(tds[1])
-            highs.append(tds[2])
-            lows.append(tds[3])
-            lasts.append(tds[4])
-            changes.append(tds[5])
-            settles.append(tds[6])
-            estimated_volumes.append(tds[7])
-            prior_day_ois.append(tds[8])
+            trs = driver.execute_script(
+                """
+                const rows = document.querySelectorAll(".main-table-wrapper table tbody tr");
+                return Array.from(rows).map(row =>
+                    Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
+                );
+                """)
+            for tds in trs:
+                dates.append(dt.strftime(evalDate, "%Y-%m-%d"))
+                expiries.append(tds[0])
+                opens.append(tds[1])
+                highs.append(tds[2])
+                lows.append(tds[3])
+                lasts.append(tds[4])
+                changes.append(tds[5])
+                settles.append(tds[6])
+                estimated_volumes.append(tds[7])
+                prior_day_ois.append(tds[8])
 
-        time.sleep(2.0) # to avoid being blocked by server
-        print("Finished for " + str(evalDate)) 
+            time.sleep(2.0) # to avoid being blocked by server
+            print(f"{assetName} future: Finished for {str(evalDate)}") 
 
-    # export to file
-    dic = {
-        "Date": dates,
-        "Expiry": expiries,
-        "OpenPrice": opens,
-        "HighPrice": highs,
-        "LowPrice": lows,
-        "LastPrice": lasts,
-        "SettlePrice": settles,
-        "SettlePriceChange": changes,
-        "EstimatedVolume": estimated_volumes,
-        "PriorDayOpenInterest": prior_day_ois,
-        }
-    dfs.append(pd.DataFrame(dic))
-    df = pd.concat(dfs)
-    os.makedirs(DIR, exist_ok=True)
-    df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
+        # export to file
+        dic = {
+            "Date": dates,
+            "Expiry": expiries,
+            "OpenPrice": opens,
+            "HighPrice": highs,
+            "LowPrice": lows,
+            "LastPrice": lasts,
+            "SettlePrice": settles,
+            "SettlePriceChange": changes,
+            "EstimatedVolume": estimated_volumes,
+            "PriorDayOpenInterest": prior_day_ois,
+            }
+        dfs.append(pd.DataFrame(dic))
+        df = pd.concat(dfs)
+        os.makedirs(DIR, exist_ok=True)
+        df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
 
-    shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)
+        shutil.copy(DIR + "/" + OUTPUT_FILE, latest_full_path)
 
-    print("Finished all")
+        print(f"{assetName} future: Finished all")
 
-else:
-    print("Skipped due to no update on website.")
+    else:
+        print(f"{assetName} future: Skipped due to no update on website.")
+
+if __name__ == "__main__":
+    fetch_CME_crypto_futures("BTC")
+    fetch_CME_crypto_futures("ETH")
