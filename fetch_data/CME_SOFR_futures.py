@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 import os
 import pandas as pd
 import time
@@ -87,13 +88,17 @@ for instrument_flag in sofr_instrument_flags:
         try:
             driver.get(url)
             shadow_host = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.TAG_NAME, "bc-data-grid"))
-        )
-        except TimeoutError as e:
-            print(f"Ticker: {ticker}: Timeout.")
+                EC.presence_of_element_located((By.TAG_NAME, "bc-data-grid"))
+            )
+        except TimeoutException as e:
+            print(f"Ticker: {ticker}: Timeout exception.")
             month_count += 1
             continue
-        except Exception as e:
+        except TimeoutError as e:
+            print(f"Ticker: {ticker}: Timeout error.")
+            month_count += 1
+            continue
+        except BaseException as e:
             print(f"Ticker: {ticker}: Other error.")
             month_count += 1
             continue
