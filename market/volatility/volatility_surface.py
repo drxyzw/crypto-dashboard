@@ -91,30 +91,53 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
             masked_calls = [float(v) for v in df_data.loc[mask, "CallPrice"].values]
             masked_puts = [float(v) for v in df_data.loc[mask, "PutPrice"].values]
             # take average on time value between call and put
-            df_data.loc[mask, "Price"] = np.where(df_data.loc[mask, "OptionType"] == "Call",
-                                            np.where(f >= masked_strikes,
-                                                ((masked_calls - (f - masked_strikes)*domDfOption) + masked_puts) * .5
-                                                 + (f - masked_strikes)*domDfOption,
-                                                (masked_calls + (masked_puts - (masked_strikes - f)*domDfOption)) * .5),
-                                            np.where(f >= masked_strikes,
-                                                ((masked_calls - (f - masked_strikes)*domDfOption) + masked_puts) * .5,
-                                                (masked_calls + (masked_puts - (masked_strikes - f)*domDfOption)) * .5
-                                                 + (masked_strikes - f)*domDfOption))
+            masked_time_value_calls = masked_calls - np.maximum(0., f - masked_strikes)*domDfOption
+            masked_time_value_puts = masked_puts - np.maximum(0., masked_strikes - f)*domDfOption
+            masked_time_values = np.maximum(0, (masked_time_value_calls + masked_time_value_puts) * 0.5)
+            df_data.loc[mask, "Price"] = (masked_time_values +
+                                          np.where(df_data.loc[mask, "OptionType"] == "Call",
+                                            np.maximum((f - masked_strikes)*domDfOption, 0.),
+                                            np.maximum((masked_strikes - f)*domDfOption, 0.)
+                                          )
+                                         )
 
-            # further, apply smoothing on price
-            # p(k) = p0(k) + d(k)
-            # by minimizing L
-            # L = \sum_i [(p(k_i) - p(k_{i+1}))^2 + d(k_i)^2/sp^2]
-            def loss(dP, prices, strikes, cp, f, domDfOption):
+            # # smoothing based on time value or curvature
+            # def loss(timeValues, prices0, strikes, cp, f, domDfOption):
+            #     spread = 5.
+            #     timeValues = np.array(timeValues)
+            #     undisc_intrinsic = np.maximum(f-strikes, 0.) if cp == ql.Option.Call else np.maximum(strikes - f, 0.)
+            #     intrinsic = domDfOption * undisc_intrinsic
+            #     timeValues0 = np.maximum(prices0 - intrinsic, 0.)
+            #     timeValues[0] = 0. # timeValues0[0]
+            #     timeValues[-1] = 0. # timeValues0[-1]
+            #     prices = intrinsic + timeValues
+            #     dPrices = prices - prices0
+
+            #     slopes = np.diff(prices) / np.diff(strikes)
+            #     # diff = (slopes) ** 2
+            #     ave_strikes = 0.5 * (strikes[:-1] + strikes[1:])
+            #     curvatures = np.diff(slopes) / np.diff(ave_strikes)
+            #     diff = (curvatures) ** 2
+            #     ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
+            #     dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
+            #     # diff = (dCurvatures) ** 2
+            #     reg = (dPrices / spread) ** 2
+            #     loss_value = 1.e+9 * np.sum(diff) + np.sum(reg)
+            #     return loss_value
+
+            # smoothing based on time value or dCurvature
+            def loss(timeValues, prices0, strikes, cp, f, domDfOption):
                 spread = 5.
-                dP = np.array(dP)
-                dP[0] = 0.
-                dP[-1] = 0.
-                undisc_price = (prices + dP) / domDfOption
-                intrinsic = np.max(f-strikes, 0) if cp == ql.Option.Call else np.max(strikes - f)
-                intrinsicPenalty = np.maximum((intrinsic - undisc_price) / strikes, 0.)**2
+                timeValues = np.array(timeValues)
+                undisc_intrinsic = np.maximum(f-strikes, 0.) if cp == ql.Option.Call else np.maximum(strikes - f, 0.)
+                intrinsic = domDfOption * undisc_intrinsic
+                timeValues0 = np.maximum(prices0 - intrinsic, 0.)
+                timeValues[0] = 0. # timeValues0[0]
+                timeValues[-1] = 0. # timeValues0[-1]
+                prices = intrinsic + timeValues
+                dPrices = prices - prices0
 
-                slopes = np.diff(undisc_price) / np.diff(strikes)
+                slopes = np.diff(prices) / np.diff(strikes)
                 # diff = (slopes) ** 2
                 ave_strikes = 0.5 * (strikes[:-1] + strikes[1:])
                 curvatures = np.diff(slopes) / np.diff(ave_strikes)
@@ -122,42 +145,28 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
                 ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
                 dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
                 diff = (dCurvatures) ** 2
-                reg = (dP / spread) ** 2
-                loss_value = 100.*np.sum(diff) + np.sum(reg) + 100. * np.sum(intrinsicPenalty)
+                reg = (dPrices / spread) ** 2
+                loss_value = 1.e+15 * np.sum(diff) + np.sum(reg)
                 return loss_value
 
-            # def smooth_price(x, y, coeff_grad):
-            #     n = len(x)
-            #     A = np.zeros((n, n))
-            #     price_unit = 5.
-            #     l = 1. / price_unit**2
-
-            #     b = y.copy() * l
-            #     for i in range(n):
-            #         A[i, i] += l
-                
-            #     for i in range(1, (n-2) + 1):
-            #         dx_m = x[i] - x[i-1]
-            #         dx = x[i+1] - x[i]
-            #         w_m = coeff_grad / (dx_m**2)
-            #         w = coeff_grad / (dx**2)
-            #         A[i, i] += w + w_m
-            #         A[i-1, i] -= w_m
-            #         A[i, i+1] -= w
-            #     z = np.linalg.solve(A, b)
-            #     return z
-
             mask_call = mask & (df_data["OptionType"] == "Call")
-            callPrices = df_data.loc[mask_call, "Price"].values
+            callPrices0 = df_data.loc[mask_call, "Price"].values
             callStrikes = np.array([float(v) for v in df_data.loc[mask_call, "Strike"].values])
-            dCallPrices0 = 10. * np.random.rand(len(callStrikes)) - 5.
+            callPricesIntrinsic = np.maximum(f.values[0] - callStrikes, 0.) * domDfOption.values[0]
+            callTimeValues = np.maximum(callPrices0 - callPricesIntrinsic, 0.)
+            # callTimeValues = 0.1 * np.random.rand(len(callStrikes))
             # dCallPrices0 = np.zeros_like(callPrices)
-            dCallPrices = minimize(loss, dCallPrices0, args=(callPrices, callStrikes, ql.Option.Call, f.values[0], domDfOption.values[0]))
+            dCallPrices = minimize(
+                loss, callTimeValues, bounds=[(0, None)] * len(callTimeValues),
+                args=(callPrices0, callStrikes, ql.Option.Call, f.values[0], domDfOption.values[0]),
+                tol = 1.e-8, options={'maxiter':1e+8},
+                method='CG')
             # dCallPrices = minimize(loss, dCallPrices0, method="L-BFGS-B", args=(callPrices, callStrikes))
-            callPrices = callPrices + dCallPrices.x
+            callPrices = callPricesIntrinsic + dCallPrices.x
             # callPrices = smooth_price(callStrikes, callPrices, coeff_grad=1.)
             df_data.loc[mask_call, "Price"] = callPrices
 
+            dCallPrices = callPrices - callPrices0
             slopes = np.diff(callPrices) / np.diff(callStrikes)
             # diff = (slopes) ** 2
             ave_strikes = 0.5 * (callStrikes[:-1] + callStrikes[1:])
@@ -227,7 +236,7 @@ def implied_volatility(row, marketDate, impliedFuture, domYc = None, assetYc = N
     #         return vol
     #     else:
     #         return None
-    if f > synthCall and synthCall > max(0, f - k) and k > synthPut and synthPut > max(0, k - f):
+    if f > synthCall and synthCall >= max(0, f - k) and k > synthPut and synthPut >= max(0, k - f):
         std = ql.blackFormulaImpliedStdDev(cp, k, f, undisc_price)
         vol = std / np.sqrt(t)
         return vol
