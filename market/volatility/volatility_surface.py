@@ -146,7 +146,7 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
                 dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
                 diff = (dCurvatures) ** 2
                 reg = (dPrices / spread) ** 2
-                loss_value = 1.e+15 * np.sum(diff) + np.sum(reg)
+                loss_value = 1.e+16 * np.sum(diff) + np.sum(reg)
                 return loss_value
 
             mask_call = mask & (df_data["OptionType"] == "Call")
@@ -160,7 +160,7 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
                 loss, callTimeValues, bounds=[(0, None)] * len(callTimeValues),
                 args=(callPrices0, callStrikes, ql.Option.Call, f.values[0], domDfOption.values[0]),
                 tol = 1.e-8, options={'maxiter':1e+8},
-                method='CG')
+                method='BFGS')
             # dCallPrices = minimize(loss, dCallPrices0, method="L-BFGS-B", args=(callPrices, callStrikes))
             callPrices = callPricesIntrinsic + dCallPrices.x
             # callPrices = smooth_price(callStrikes, callPrices, coeff_grad=1.)
