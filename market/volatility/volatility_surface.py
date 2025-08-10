@@ -146,7 +146,7 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
                 dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
                 diff = (dCurvatures) ** 2
                 reg = (dPrices / spread) ** 2
-                loss_value = 1.e+16 * np.sum(diff) + np.sum(reg)
+                loss_value = 1.e+17 * np.sum(diff) + np.sum(reg)
                 return loss_value
 
             mask_call = mask & (df_data["OptionType"] == "Call")
@@ -154,24 +154,18 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
             callStrikes = np.array([float(v) for v in df_data.loc[mask_call, "Strike"].values])
             callPricesIntrinsic = np.maximum(f.values[0] - callStrikes, 0.) * domDfOption.values[0]
             callTimeValues = np.maximum(callPrices0 - callPricesIntrinsic, 0.)
-            # callTimeValues = 0.1 * np.random.rand(len(callStrikes))
-            # dCallPrices0 = np.zeros_like(callPrices)
             dCallPrices = minimize(
                 loss, callTimeValues, bounds=[(0, None)] * len(callTimeValues),
                 args=(callPrices0, callStrikes, ql.Option.Call, f.values[0], domDfOption.values[0]),
                 tol = 1.e-8, options={'maxiter':1e+8},
                 method='BFGS')
-            # dCallPrices = minimize(loss, dCallPrices0, method="L-BFGS-B", args=(callPrices, callStrikes))
             callPrices = callPricesIntrinsic + dCallPrices.x
-            # callPrices = smooth_price(callStrikes, callPrices, coeff_grad=1.)
             df_data.loc[mask_call, "Price"] = callPrices
 
             dCallPrices = callPrices - callPrices0
             slopes = np.diff(callPrices) / np.diff(callStrikes)
-            # diff = (slopes) ** 2
             ave_strikes = 0.5 * (callStrikes[:-1] + callStrikes[1:])
             curvatures = np.diff(slopes) / np.diff(ave_strikes)
-            # diff = (curvatures) ** 2
             ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
             dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
             df_data.loc[mask_call, 'Computed_slope'] = list(slopes) + [0.]
@@ -179,13 +173,27 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
             df_data.loc[mask_call, 'Computed_dCurvature'] = list(dCurvatures) + [0.] * 3 
 
             mask_put = mask & (df_data["OptionType"] == "Put")
-            putPrices = df_data.loc[mask_put, "Price"].values
+            putPrices0 = df_data.loc[mask_put, "Price"].values
             putStrikes = np.array([float(v) for v in df_data.loc[mask_put, "Strike"].values])
-            dPutPrices0 = np.zeros_like(putPrices)
-            dPutPrices = minimize(loss, dPutPrices0, method="L-BFGS-B", args=(putPrices, putStrikes, ql.Option.Put, f.values[0], domDfOption.values[0]))
-            putPrices = putPrices + dPutPrices.x
-            # putPrices = smooth_price(putStrikes, putPrices, coeff_grad=1.)
+            putPricesIntrinsic = np.maximum(putStrikes - f.values[0], 0.) * domDfOption.values[0]
+            putTimeValues = np.maximum(putPrices0 - putPricesIntrinsic, 0.)
+            dPutPrices = minimize(
+                loss, putTimeValues, bounds=[(0, None)] * len(putTimeValues),
+                args=(putPrices0, putStrikes, ql.Option.Put, f.values[0], domDfOption.values[0]),
+                tol = 1.e-8, options={'maxiter':1e+8},
+                method='BFGS')
+            putPrices = putPricesIntrinsic + dPutPrices.x
             df_data.loc[mask_put, "Price"] = putPrices
+
+            dPutPrices = putPrices - putPrices0
+            slopes = np.diff(putPrices) / np.diff(putStrikes)
+            ave_strikes = 0.5 * (putStrikes[:-1] + putStrikes[1:])
+            curvatures = np.diff(slopes) / np.diff(ave_strikes)
+            ave_ave_strikes = 0.5 * (ave_strikes[:-1] + ave_strikes[1:])
+            dCurvatures = np.diff(curvatures) / np.diff(ave_ave_strikes)
+            df_data.loc[mask_put, 'Computed_slope'] = list(slopes) + [0.]
+            df_data.loc[mask_put, 'Computed_curvature'] = list(curvatures) + [0.] * 2 
+            df_data.loc[mask_put, 'Computed_dCurvature'] = list(dCurvatures) + [0.] * 3 
 
     return df_data
 
