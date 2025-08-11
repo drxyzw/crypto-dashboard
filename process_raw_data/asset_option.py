@@ -18,11 +18,11 @@ PROCESSED_DIR = "./data_processed"
 def load_excel_with_cache(file_path):
     return pd.read_excel(file_path)
 
-def prepare_BTCUSD_options(marketDate):
+def prepare_BTCUSD_options(marketDate, BTC_OPTIONS_raw = None):
     marketDateStr = marketDate.strftime("%Y-%m-%d")
     marketDateStrNoHyphen = marketDate.strftime("%Y%m%d")
-    BTC_OPTIONS_raw = load_excel_with_cache(BTC_OPTION_FILE)
-
+    if BTC_OPTIONS_raw is None:
+        BTC_OPTIONS_raw = load_excel_with_cache(BTC_OPTION_FILE)
     BTC_OPTIONS_raw['Date'] = pd.to_datetime(BTC_OPTIONS_raw['Date'])
 
     # df for config sheet
@@ -56,9 +56,17 @@ def prepare_BTCUSD_options(marketDate):
         print(f"Skipped exporting {PROCESSED_FILE} because fetched data is empty.")
 
 
-if __name__ == "__main__":
-    marketDate = dt(2025, 6, 13)
-    # marketDate = dt(2025, 7, 14)
-    while marketDate < dt.now():
-        prepare_BTCUSD_options(marketDate)
-        marketDate += relativedelta(days=1)
+# if __name__ == "__main__":
+#     marketDate = dt(2025, 6, 13)
+#     # marketDate = dt(2025, 8, 8)
+#     BTC_OPTIONS_raw = load_excel_with_cache(BTC_OPTION_FILE)
+#     while marketDate < dt.now():
+#         prepare_BTCUSD_options(marketDate, BTC_OPTIONS_raw)
+#         marketDate += relativedelta(days=1)
+
+marketDate = dt(2025, 6, 13)
+# marketDate = dt(2025, 8, 8)
+BTC_OPTIONS_raw = load_excel_with_cache(BTC_OPTION_FILE)
+while marketDate < dt.now():
+    prepare_BTCUSD_options(marketDate, BTC_OPTIONS_raw)
+    marketDate += relativedelta(days=1)
