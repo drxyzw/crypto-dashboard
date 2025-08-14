@@ -7,18 +7,15 @@ from market.volatility.volatility_surface import *
 PROCESSED_DIR = "./data_processed"
     
 if __name__ == "__main__":
-    py_date = dt(2025, 6, 13)
-    # py_date = dt(2025, 6, 20)
-    # py_date = dt(2025, 7, 14)
-
-    dfs_mkt_list = []
-    # while py_date == dt(2025, 6, 20):
-    while py_date < dt.now():
-        for regularize_vol in [True, False]:
+    for regularize_vol in [False, True]:
+        dfs_mkt_list = []
+        py_date = dt(2025, 6, 13)
+        # py_date = dt(2025, 6, 20)
+        # py_date = dt(2025, 7, 14)
+        # while py_date < dt(2025, 6, 30):
+        while py_date < dt.now():
             market = loadMarket(py_date)
-            market_vol = build_volatility_surface(market, regularize_vol=regularize_vol)
-            market = None
-            market_vol = None
+            market_vol = build_volatility_surface(market, regularize_vol=regularize_vol, outputSlopeCurvature=True)
             if not market_vol is None:
                 market = market_vol
 

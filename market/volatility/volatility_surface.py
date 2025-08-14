@@ -301,7 +301,7 @@ def checkFuture(df_data, marketDate, domYc, assetYc, asset_spot):
                     raise ValueError(message)
                 else:
                     print(message)
-            
+
 def arbitrageCheck(row, domDfOption, optionType, outputSlopeCurvature = False):
     prices = row["Price"].values / domDfOption
     
@@ -473,7 +473,7 @@ def checkCalendarArbitrageOnPrice(row, df_price):
     else:
         return row['Arbitrage']
 
-def build_volatility_surface(market_dict, regularize_vol):
+def build_volatility_surface(market_dict, regularize_vol, outputSlopeCurvature):
     if not market_dict:
         print("Input market is empty")
         return None
@@ -528,8 +528,9 @@ def build_volatility_surface(market_dict, regularize_vol):
 
     df_data.dropna(subset=["ImpliedVol"], inplace=True)
     df_data["Arbitrage"] = None
-    df_data["Slope"] = None
-    df_data["Curvature"] = None
+    if outputSlopeCurvature:
+        df_data["Slope"] = None
+        df_data["Curvature"] = None
 
     dfs_smile = []
     dfs_smile_obj = []
@@ -562,7 +563,7 @@ def build_volatility_surface(market_dict, regularize_vol):
             while True: # continue arbitrage check until no arbitrage is left
                 last_call_non_arb = mask_call
                 # df_data.loc[mask_call, "Arbitrage"] = arbitrageCheck(df_data[mask_call], domDfOption, "Call")
-                df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = False)
+                df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
                 mask_call = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
@@ -575,7 +576,7 @@ def build_volatility_surface(market_dict, regularize_vol):
             while True: # continue arbitrage check until no arbitrage is left
                 last_put_non_arb = mask_put
                 # df_data.loc[mask_put, "Arbitrage"] = arbitrageCheck(df_data[mask_put], domDfOption, "Put")
-                df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = False)
+                df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
                 mask_put = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
@@ -585,7 +586,7 @@ def build_volatility_surface(market_dict, regularize_vol):
             mask_call = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
-            df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = False)
+            df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
             mask_call = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Call"))
@@ -593,7 +594,7 @@ def build_volatility_surface(market_dict, regularize_vol):
             mask_put = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
-            df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = False)
+            df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
             mask_put = ((df_data['ExpiryDate'] == expiryDate)
                          & (df_data['FutureExpiryDate'] == futureExpiryDate)
                          & (df_data['OptionType'] == "Put"))
