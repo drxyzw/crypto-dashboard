@@ -20,10 +20,11 @@ def loadMarket(py_date, names = []):
     ql.Settings.instance().evaluationDate = pyDateToQlDate(py_date)
 
     # load all excels from a directory
+    files_to_exclude = ["VOLSURFACE", "IMPLIEDVOL", "QPROBABILITY"]
     files = getAllFilesInDirectory(processed_dir_with_date)
     market_raw_dfs = {}
     for file in files:
-        if "VOLSURFACE" in file or "IMPLIEDVOL" in file:
+        if any([kw in file for kw in files_to_exclude]):
             continue
         config_sheet = pd.read_excel(file, sheet_name="Config")
         config_dict = convertDataframeToDictionary(config_sheet)
