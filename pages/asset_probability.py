@@ -44,17 +44,8 @@ layout = html.Div([
     dcc.RangeSlider(id="t_slider",
                     min=0.,
                     max=2.,
-                    step=0.5,
+                    step=0.25,
                     value=[0., 2.]),
-    # dcc.RangeSlider(id="vol_slider",
-    #                 min=0.,
-    #                 max=2.,
-    #                 step=0.2,
-    #                 value=[0., 1.],
-    #                 marks={v: str(int(v*100))+"%" for v in [0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2]}),
-    # dcc.Checklist(id="arbitrage-checklist",
-    #               options=["Show arbitrage point"],
-    #               value=[]),
     dcc.Store(id="data-qprobability", data={
         "qprobability": None,
     }),
@@ -71,7 +62,6 @@ layout = html.Div([
     Output("qprobability-chart-container", "figure", allow_duplicate=True),
     Input("strike_slider", "value"),
     Input("t_slider", "value"),
-    # Input("vol_slider", "value"),
     State("qprobability-chart-container", "figure"),
     State("data-qprobability", "data"),
     prevent_initial_call=True,
@@ -90,19 +80,7 @@ def update_chart_range(strike_slider_value, t_slider_value, fig, data):
         max_qprob = max(qprob_selected)
         min_qprob = min(qprob_selected)
         fig['layout']['scene']['zaxis']['range'] = [min_qprob, max_qprob]
-        # fig['layout']['scene']['zaxis']['range'] = vol_slider_value
-        # find max vol in the ranges of x and y
-        # xs = {k: v for k, v in fig['data'][0]['x']['_inputArray'].items() if k.isnumeric()}
-        # minx = strike_slider_value[0]
-        # maxx = strike_slider_value[1]
-        # maxz = 0.
-        # for i_y, y in enumerate(fig['data'][0]['y']):
-        #     if t_slider_value[0] <= y and y <= t_slider_value[1]:
-        #         vol_smile = fig['data'][0]['z']['_inputArray'][i_y]
-        #         selected_vol_smile = [vol_smile[i_x] for i_x, x in xs.items() if minx <= x and x <= maxx]
-        #         selected_vol_smile = np.array(selected_vol_smile, dtype=float)
-        #         maxz = max(maxz, np.nanmax(selected_vol_smile))
-        # cmax = min(maxz, vol_slider_value[1])
+
         fig = go.Figure(fig)
 
         new_trace = go.Surface(
@@ -113,13 +91,13 @@ def update_chart_range(strike_slider_value, t_slider_value, fig, data):
         cmin=min_qprob,
         cmax=max_qprob,
         colorbar=dict(exponentformat="power"),
-        name="volsurface")
-        fig.update_traces(new_trace, selector=dict(name="volsurface"))
+        name="qprobability")
+        fig.update_traces(new_trace, selector=dict(name="qprobability"))
 
     return fig
 
 def displayChart(qprobability, strike_sllider_value, t_sllider_value,
-                 k_range = None, t_range = None, vol_range = None):
+                 k_range = None, t_range = None):
     x = qprobability['Strike'].values
     y = qprobability['TTM'].values
     z = qprobability['Density'].values
@@ -168,9 +146,7 @@ def displayChart(qprobability, strike_sllider_value, t_sllider_value,
         y=Y_grid,
         z=Z_grid,
         colorscale='Viridis',
-        name="volsurface",
-        # cmin=vol_sllider_value[0],
-        # cmax=vol_sllider_value[1],
+        name="qprobability",
         colorbar=dict(exponentformat="power"),
     ))
 
@@ -178,7 +154,7 @@ def displayChart(qprobability, strike_sllider_value, t_sllider_value,
         scene=dict(
             xaxis=dict(title="Strike", range=strike_sllider_value),
             yaxis=dict(title="T (years)", range=t_sllider_value),
-            zaxis=dict(title="Vol", exponentformat="power"),
+            zaxis=dict(title="Risk Neutral Probability", exponentformat="power"),
         ),
         margin=dict(l=20, r=20, t=50, b=20),
         legend_orientation="h",
@@ -197,15 +173,12 @@ def update_output(selected_date_str, strike_sllider_value, t_sllider_value, data
     selected_date_py = dt.strptime(selected_date_str, "%Y-%m-%d")
     # selected_date_ql = YYYYMMDDHyphenToQlDate(selected_date_str)
     # market = loadMarket(selected_date_py, names=mkt_object_names)
-    # volsurface = market[mkt_object_names[0]]
     YYYYMMDD = selected_date_py.strftime("%Y%m%d")
     PROCESSED_DIR = "./data_processed"
     qprob_file = PROCESSED_DIR + "/" + YYYYMMDD + "/" + "BTCUSDQPROBABILITY_" + YYYYMMDD + ".xlsx"
     qprob = pd.read_excel(qprob_file)
     data["qprobability"] = qprob.to_dict("records")
 
-    # max_vol = min(2., np.nanmax(volsurface['Vol'].values))
-
     fig = displayChart(qprob, strike_sllider_value, t_sllider_value)
-    return fig, data #, max_vol #, funding_table, funding_fig
+    return fig, data
 
