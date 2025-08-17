@@ -58,9 +58,12 @@ layout = html.Div([
     dbc.Row([
         dbc.Col(dcc.Graph(id="volsurface-chart-container",
                           responsive=True,
-                        ),
-                # width=7,
-                ),
+                        ), width=7,
+        ),
+        dbc.Col(dcc.Graph(id="volsmile-chart-container",
+                          responsive=True,
+                        ), width=5,
+        ),
     ]),
 ])
 
@@ -265,3 +268,36 @@ def update_output(selected_date_str, arbitrage_checklist_value, strike_sllider_v
     fig = displayChart(volsurface, arbitrage_checklist_value, strike_sllider_value, t_sllider_value, vol_sllider_value)
     return fig, max_vol #, funding_table, funding_fig
 
+@callback(
+    Output("volsmile-chart-container", "figure"),
+    Input("volsurface-chart-container", "hoverData"),
+    Input("strike_slider", "value"),
+    State("volsurface-chart-container", "figure"),
+)
+def update_cross_section(hoverData, strike_sllider_value, volsurface_fig):
+    if volsurface_fig is None:
+        return None
+    
+    if hoverData is None:
+        return go.Figure()
+    TTM_hover = hoverData['points'][0]['y']
+    
+    X = volsurface_fig["data"][0]["x"]["_inputArray"]
+    Y = volsurface_fig["data"][0]["y"]
+    Z = volsurface_fig["data"][0]["z"]["_inputArray"]
+
+    # X = dictionary where values are {len_strike + 3]}m the last 3 are rubbish
+    # Y = list of [len_TTM]
+    # Z = array of [len_TTM][len_strike]
+    strikes = list(X.values())[:-3]
+    TTM = np.array(Y)
+    z_grid = [list(zs_of_y.values()) for zs_of_y in Z]
+
+    TTM_idx = np.abs(TTM- TTM_hover).argmin()
+    zs = z_grid[TTM_idx]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=strikes, y=zs))
+    fig.update_layout({"xaxis_title": "Strike", "yaxis_title": "Volatility",
+                       "title": f"Volatility smile at maturity={TTM[TTM_idx]:.2f} year(s)",
+                       "xaxis_range": strike_sllider_value, "yaxis_tickformat": ".0%", })
+    return fig

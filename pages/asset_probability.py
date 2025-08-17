@@ -52,9 +52,12 @@ layout = html.Div([
     dbc.Row([
         dbc.Col(dcc.Graph(id="qprobability-chart-container",
                           responsive=True,
-                        ),
-                # width=7,
-                ),
+                        ), width=7,
+        ),
+        dbc.Col(dcc.Graph(id="qprobability-per-TTM-chart-container",
+                          responsive=True,
+                        ), width=5,
+        ),
     ]),
 ])
 
@@ -182,3 +185,36 @@ def update_output(selected_date_str, strike_sllider_value, t_sllider_value, data
     fig = displayChart(qprob, strike_sllider_value, t_sllider_value)
     return fig, data
 
+@callback(
+    Output("qprobability-per-TTM-chart-container", "figure"),
+    Input("qprobability-chart-container", "hoverData"),
+    Input("strike_slider", "value"),
+    State("qprobability-chart-container", "figure"),
+)
+def update_cross_section(hoverData, strike_sllider_value, perTTM_fig):
+    if perTTM_fig is None:
+        return None
+    
+    if hoverData is None:
+        return go.Figure()
+    TTM_hover = hoverData['points'][0]['y']
+    
+    X = perTTM_fig["data"][0]["x"]["_inputArray"]
+    Y = perTTM_fig["data"][0]["y"]
+    Z = perTTM_fig["data"][0]["z"]["_inputArray"]
+
+    # X = dictionary where values are {len_strike + 3]}m the last 3 are rubbish
+    # Y = list of [len_TTM]
+    # Z = array of [len_TTM][len_strike]
+    strikes = list(X.values())[:-3]
+    TTM = np.array(Y)
+    z_grid = [list(zs_of_y.values()) for zs_of_y in Z]
+
+    TTM_idx = np.abs(TTM- TTM_hover).argmin()
+    zs = z_grid[TTM_idx]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=strikes, y=zs))
+    fig.update_layout({"xaxis_title": "Strike", "yaxis_title": "Density",
+                       "title": f"Risk neutral probability at maturity={TTM[TTM_idx]:.2f} year(s)",
+                       "xaxis_range": strike_sllider_value, "yaxis_exponentformat": "power"})
+    return fig
