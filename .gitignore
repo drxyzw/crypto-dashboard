@@ -1,5 +1,9 @@
-*.xlsx
+analysis/
+archive_unchanged_quotes/
+archive/
+bak/
+experiment/
 !*_latest.xlsx
 *.pyc
 .env
-__pycache__/**
+__pycache__/
