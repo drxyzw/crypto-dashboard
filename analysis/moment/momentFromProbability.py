@@ -1,9 +1,7 @@
 import QuantLib as ql
-from datetime import datetime as dt
 import pandas as pd
 import numpy as np
 import os
-from sklearn.linear_model import LinearRegression
 
 from utils.convention import *
 PROCESSED_DIR = "./data_processed"
@@ -64,7 +62,8 @@ def compute_moment(market_dict):
                 (df_data_f_expiry_date["CumulativeDensity"] >= CUMUL_EPS) &
                 (df_data_f_expiry_date["CumulativeDensity"] <= 1. - CUMUL_EPS)
                 ]
-            
+            t = df_to_integrate["TTM"].values[0]
+
             # Risk-Neutral Probability
             cumul_densities = df_to_integrate["CumulativeDensity"].values
             k_values = df_to_integrate["Strike"].values
@@ -72,7 +71,7 @@ def compute_moment(market_dict):
             normalize = cumul_densities[-1] - cumul_densities[0]
             dCumul = cumul_densities[1:] - cumul_densities[:-1]
             aveRetAbs = 0.5 * (k_values[1:] + k_values[:-1])
-            aveRet = 0.5 * (k_returns[1:] + k_returns[:-1])
+            aveRet = 0.5 * (k_returns[1:] + k_returns[:-1]) * np.sqrt(1. / t) # annualization
             # moment 1: meean
             ABSM1_RN = np.dot(dCumul, aveRetAbs) / normalize
             M1_RN = np.dot(dCumul, aveRet) / normalize
@@ -90,18 +89,24 @@ def compute_moment(market_dict):
             if(df_historicalSpotPrice["Date"].values[-1] >= pyExpiryDate):
                 df_historicalSpotPrice_select = df_historicalSpotPrice[(df_historicalSpotPrice["Date"] > pyMarketDate) &
                                                                        (df_historicalSpotPrice["Date"] <= pyExpiryDate)]
-                retSpot = np.log(df_historicalSpotPrice_select["BRR"].values / spotPrice)
+                retSpot = np.log(df_historicalSpotPrice_select["BRR"].values / spotPrice) * np.sqrt(365.25) # annualization
                 # moment 1: meean
                 M1_PH = np.mean(retSpot)
-                # center moment 2: variance
-                cRetSpot = retSpot - M1_PH
-                CM2_PH = np.mean(cRetSpot**2)
-                # center normalized moment 3: skewness
-                CM3_PH = np.mean(cRetSpot**3)
-                CMN3_PH = CM3_PH / CM2_PH**(3./2)
-                # center normalized moment 4: kurtosis
-                CM4_PH = np.mean(cRetSpot**4)
-                CMN4_PH = CM4_PH / CM2_PH**(4./2)
+                # if only 1 day interval, can't compute central moments
+                if (pyExpiryDate - pyMarketDate).days == 1:
+                    CM2_PH = None
+                    CMN3_PH = None
+                    CMN4_PH = None
+                else:
+                    # center moment 2: variance
+                    cRetSpot = retSpot - M1_PH
+                    CM2_PH = np.mean(cRetSpot**2)
+                    # center normalized moment 3: skewness
+                    CM3_PH = np.mean(cRetSpot**3)
+                    CMN3_PH = CM3_PH / CM2_PH**(3./2)
+                    # center normalized moment 4: kurtosis
+                    CM4_PH = np.mean(cRetSpot**4)
+                    CMN4_PH = CM4_PH / CM2_PH**(4./2)
             else:
                 M1_PH = None
                 CM2_PH = None
@@ -112,7 +117,7 @@ def compute_moment(market_dict):
                 {
                     "ExpiryDate": [df_to_integrate["ExpiryDate"].values[0]],
                     "FutureExpiryDate": [df_to_integrate["FutureExpiryDate"].values[0]],
-                    "TTM": [df_to_integrate["TTM"].values[0]],
+                    "TTM": [t],
                     "ABSM1_RN": [ABSM1_RN],
                     "M1_RN": [M1_RN],
                     "CM2_RN": [CM2_RN],
