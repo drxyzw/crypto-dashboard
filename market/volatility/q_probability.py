@@ -217,5 +217,5 @@ def build_q_probability(market_dict):
     df_smile = pd.concat(dfs_smile).reset_index(drop=True)
     df_smile.to_excel(directory + f"/BTCUSDQPROBABILITY_{YYYYMMDD}.xlsx", index=False)
 
-    market_dict['BTCUSD.QPROBABIL  ITY'] = df_smile
+    market_dict['BTCUSD.QPROBABILITY'] = df_smile
     return market_dict

@@ -23,14 +23,14 @@ if __name__ == "__main__":
         betas = list(reg_result.coef_)
         intercept = reg_result.intercept_
         r2 = reg_result.score(X, y)
-        cols = ["Target", ] + y_columns + ["intercept", "R2"]
+        cols = ["Target", ] + ["Beta_" + col for col in y_columns] + ["intercept", "R2"]
         values = [y_column] + betas + [intercept, r2]
         values_vec = [[v] for v in values]
         dict_result = dict(zip(cols, values_vec))
         df_result_i = pd.DataFrame(dict_result)
         dfs_result.append(df_result_i)
         y_predict = reg_result.predict(X)
-        df_predict[y_column] = y_predict
+        df_predict[y_column + "_pred"] = y_predict
 
     df_result = pd.concat(dfs_result)
     df_result.to_excel(REGRESSION_FILE, index=False)

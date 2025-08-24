@@ -6,7 +6,7 @@ from market.volatility.q_probability import *
 from dateutil.relativedelta import relativedelta
 
 PROCESSED_DIR = "./data_processed"
-    
+
 if __name__ == "__main__":
     py_date = dt(2025, 6, 13)
     # py_date = dt(2025, 7, 14)
