@@ -20,7 +20,7 @@ def loadMarket(py_date, names = []):
     ql.Settings.instance().evaluationDate = pyDateToQlDate(py_date)
 
     # load all excels from a directory
-    files_to_exclude = ["VOLSURFACE", "IMPLIEDVOL", "QPROBABILITY"]
+    files_to_exclude = ["VOLSURFACE", "IMPLIEDVOL", "QPROBABILITY", "MOMENT"]
     files = getAllFilesInDirectory(processed_dir_with_date)
     market_raw_dfs = {}
     for file in files:
