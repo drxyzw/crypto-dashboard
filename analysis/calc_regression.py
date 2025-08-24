@@ -1,6 +1,5 @@
-from datetime import datetime as dt
 import pandas as pd
-from sklearn.linear_model import LassoCV 
+from utils.lassoStandardize import LassoCVStndardize
 
 ANALYZED_DIR = "./data_analyzed"
 MOMENT_FILE = ANALYZED_DIR + "/moment.xlsx"
@@ -18,7 +17,7 @@ if __name__ == "__main__":
     dfs_result = []
     for y_column in y_columns:
         y = df[y_column]
-        model = LassoCV()
+        model = LassoCVStndardize()
         reg_result = model.fit(X, y)
         betas = list(reg_result.coef_)
         intercept = reg_result.intercept_
