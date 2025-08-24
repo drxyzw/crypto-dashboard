@@ -91,19 +91,22 @@ def compute_moment(market_dict):
                 df_historicalSpotPrice_select = df_historicalSpotPrice[(df_historicalSpotPrice["Date"] > pyMarketDate) &
                                                                        (df_historicalSpotPrice["Date"] <= pyExpiryDate)]
                 retSpot = np.log(df_historicalSpotPrice_select["BRR"].values / spotPrice)
+                # moment 1: meean
+                M1_PH = np.mean(retSpot)
+                # center moment 2: variance
+                cRetSpot = retSpot - M1_PH
+                CM2_PH = np.mean(cRetSpot**2)
+                # center normalized moment 3: skewness
+                CM3_PH = np.mean(cRetSpot**3)
+                CMN3_PH = CM3_PH / CM2_PH**(3./2)
+                # center normalized moment 4: kurtosis
+                CM4_PH = np.mean(cRetSpot**4)
+                CMN4_PH = CM4_PH / CM2_PH**(4./2)
             else:
-                retSpot = np.array([np.nan])
-            # moment 1: meean
-            M1_PH = np.mean(retSpot)
-            # center moment 2: variance
-            cRetSpot = retSpot - M1_PH
-            CM2_PH = np.mean(cRetSpot**2)
-            # center normalized moment 3: skewness
-            CM3_PH = np.mean(cRetSpot**3)
-            CMN3_PH = CM3_PH / CM2_PH**(3./2)
-            # center normalized moment 4: kurtosis
-            CM4_PH = np.mean(cRetSpot**4)
-            CMN4_PH = CM4_PH / CM2_PH**(4./2)
+                M1_PH = None
+                CM2_PH = None
+                CMN3_PH = None
+                CMN4_PH = None
 
             df = pd.DataFrame(
                 {
