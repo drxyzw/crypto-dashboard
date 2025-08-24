@@ -12,7 +12,7 @@ from utils.config import datetimeToTimestamp, timestampToDatetime
 
 reference_rate = {
     "BTC": "BRR",
-    "ETH": "USDETH_RR",
+    "ETH": "ETHUSD_RR",
     }
 
 url_dict = {
