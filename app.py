@@ -38,3 +38,5 @@ style=SIDEBAT_STYLE)
 app.layout = html.Div([dcc.Location(id="url"), sidebar, 
                        html.Div(dash.page_container, style=CONTENT_STYLE)])
 
+if __name__ == "__main__":
+    app.run(debug=True)
