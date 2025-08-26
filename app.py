@@ -1,8 +1,13 @@
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html
 import dash
+import os
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+if "gunicorn" in os.environ.get("SERVER_SOFTWARE", "").lower() or \
+    "gunicorn" in os.environ.get("GUNICORN_CMD_ARGS", "").lower() or \
+    "gunicorn" in os.path.basename(os.getenv("_", "")):
+    server = app.server
 
 SIDEBAT_STYLE = {
     "position": "fixed",
