@@ -35,10 +35,14 @@ df_vs_prediction = pd.read_excel(ANALYSIS_DIR + "/vsPrediction.xlsx")
 dfs_vs_prediction = [
     df_vs_prediction[[m + "_PH_pred", m + "_PH", "Date", "ExpiryDate", "FutureExpiryDate", "TTM"]]
     for m in moment_keys]
+startDate = df_vs_prediction["Date"].min()
+endDate = df_vs_prediction["Date"].max()
 
 layout = html.Div([
     html.H1("BTC/USD Moment Analysis", style=HEADER_STYLE),
-    html.H3("Prediction of Physical Measure from Risk-Neutral Measure "),
+    html.H6(f"Market date: {startDate} to {endDate}"),
+    html.H6(f"* This statistical analysis suffers the lack of data points."),
+    html.H5("Prediction of Physical Measure from Risk-Neutral Measure"),
     dash_table.DataTable(id="table_regression",
                          columns=[
                              dict(name=i, id=i) if i == "Target" else
