@@ -41,7 +41,9 @@ layout = html.Div([
                 ),
     ]),
     html.Br(),
-    html.H1("BTC Implied Funding Spread Curve", style=HEADER_STYLE),
+    html.H1("BTC Implied Yield Curve", style=HEADER_STYLE),
+    html.H5("Noise on future price may disturb implied rate"),
+    html.H5("This is NOT a funding rate of perpetual future"),
     dbc.Row([
         dbc.Col(html.Div(id="funding-table-container"), width=5),
         dbc.Col(dcc.Graph(id="funding-chart-container",

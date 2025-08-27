@@ -22,7 +22,7 @@ if __name__ == "__main__":
         betas = list(reg_result.coef_)
         intercept = reg_result.intercept_
         r2 = reg_result.score(X, y)
-        cols = ["Target", ] + ["Beta_" + col for col in y_columns] + ["intercept", "R2"]
+        cols = ["Target", ] + ["Beta_" + col for col in x_columns] + ["intercept", "R2"]
         values = [y_column] + betas + [intercept, r2]
         values_vec = [[v] for v in values]
         dict_result = dict(zip(cols, values_vec))

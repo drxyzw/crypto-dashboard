@@ -43,6 +43,7 @@ layout = html.Div([
     html.H6(f"Market date: {startDate} to {endDate}"),
     html.H6(f"* This statistical analysis suffers the lack of data points."),
     html.H5("Prediction of Physical Measure from Risk-Neutral Measure"),
+    html.H6("Regression of moments under physical Measure with moments under risk-neutral measure"),
     dash_table.DataTable(id="table_regression",
                          columns=[
                              dict(name=i, id=i) if i == "Target" else
