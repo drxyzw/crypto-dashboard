@@ -14,12 +14,17 @@ Arbitrage points are detedced for call spread, butterfly, and calendar. These po
 
 ## BTC/USD Risk-Neutral Probability
 Risk Neutral Probability density function is implied from Breeden-Litzenberger formula:
+
 $\phi(k) = \frac{\partial^2}{\partial k^2}V(S,T,k)$
+
 where $V(S,T,k)$ is undiscounted call/put price (both option types return the same result).  
+
 
 Because the option price is rounded to USD 5, this disturbes the second derivative and gives noisy density.
 To address the issue, the orginal undiscounted option price $\hat{V}(S,T,k)$ is smoothed by minimizing a loss function:  
+
 $L(\{V(k)\};\{\hat{V}(k)\}) = \int dk\frac{1}{2D^2}[\frac{\partial^2}{\partial k^2}V(k)]^2 + \int dk\frac{1}{2s^2}(V(k)-\hat{V}(k))^2$
+  
 where $s$ is USD5 and $D$ is max value of slope of density function of log-normal density assuming volatility implied from ATM price $V(k=F)$.
 
 The minimization problem is solved after the loss function is discretized along strike.  

@@ -6,3 +6,5 @@ It also provides risk neutral probability and its moments, and regression analys
 
 Deployed [here](https://crypto-dashboard-dash-app.onrender.com).
 More description is found [here](doc/method.md).
+  
+Appreriate suggestions and questions.
