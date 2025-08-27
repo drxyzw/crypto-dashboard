@@ -29,6 +29,9 @@ where $s$ is USD5 and $D$ is max value of slope of density function of log-norma
 
 The minimization problem is solved after the loss function is discretized along strike.  
 
+The second derivative for the density computation uses discretization of the original strike grid in data because it is dense.  So, interpolation is not used.  For extrapolation, Pareto tails are calibrated to the both sides.
+
+
 ## BTC/USD Moment Analysis
 The goal is to predict moments under physical measure from moments under risk-neutral measure using probability in the last section, similarly to [Forecasting swap rate volatility with information from swaptions, A Liu and J Xie, 2023](https://www.bis.org/publ/work1068.pdf).  
 
