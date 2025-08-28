@@ -263,6 +263,7 @@ def update_output(selected_date_str, arbitrage_checklist_value, strike_sllider_v
     volsurface_file = PROCESSED_DIR + "/" + YYYYMMDD + "/" + "BTCUSDVOLSURFACE_" + YYYYMMDD + ".xlsx"
     volsurface = pd.read_excel(volsurface_file)
 
+    volsurface = volsurface[volsurface['Vol'] > 0.]
     max_vol = min(2., np.nanmax(volsurface['Vol'].values))
 
     fig = displayChart(volsurface, arbitrage_checklist_value, strike_sllider_value, t_sllider_value, vol_sllider_value)
