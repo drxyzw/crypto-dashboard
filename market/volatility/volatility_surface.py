@@ -241,6 +241,9 @@ def implied_volatility(row, marketDate, impliedFuture, domYc = None, assetYc = N
     #         return vol
     #     else:
     #         return None
+
+    # if we exclude equality like synthCall > max(0, f - k) andsynthPut > max(0, k - f),
+    # takes too much time for smoothing because we throw away anchoring rows with vol=None
     if f > synthCall and synthCall >= max(0, f - k) and k > synthPut and synthPut >= max(0, k - f):
         std = ql.blackFormulaImpliedStdDev(cp, k, f, undisc_price)
         vol = std / np.sqrt(t)

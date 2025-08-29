@@ -5,8 +5,8 @@ Yield curve is constructed from SOFR O/N from FED, 3M-SOFR future prices below 2
 
 ## BTC/USD Future Curve
 Future price is settlement price. Implied yield is computed by: 
-$F = S \exp[t(r_{SOFR}-r_{yield})]$
-where $F$ is future price, $S$ is spot price, $t$ is year fraction from today to future settlement date, $r_{SOFR}$ is a corresponding zero rate for SOFR, and $r_{yield}$ is the yield to imply.
+$F = S_0 \exp[t(r_{SOFR}-r_{yield})]$
+where $F$ is future price, $S_0$ is spot price, $t$ is year fraction from today to future settlement date, $r_{SOFR}$ is a corresponding zero rate for SOFR, and $r_{yield}$ is the yield to imply.
 
 ## BTC/USD Volatility Surface
 Implied volatility is computed with put price for strike below future price and call price for strike above future.  
@@ -25,7 +25,7 @@ To address the issue, the orginal undiscounted option price $\hat{V}(S,T,k)$ is 
 
 $L(\{V(k)\};\{\hat{V}(k)\}) = \int dk\frac{1}{2D^2}[\frac{\partial^2}{\partial k^2}V(k)]^2 + \int dk\frac{1}{2s^2}(V(k)-\hat{V}(k))^2$
   
-where $s$ is USD5 and $D$ is max value of slope of density function of log-normal density assuming volatility implied from ATM price $V(k=F)$.
+where $s$ is USD5 and $D$ is max value of slope of density function of log-normal density assuming volatility implied from ATM price $\hat{V}(k=F)$.
 
 The minimization problem is solved after the loss function is discretized along strike.  
 
@@ -35,6 +35,6 @@ The second derivative for the density computation uses discretization of the ori
 ## BTC/USD Moment Analysis
 The goal is to predict probability of spot price at future time.  
 
-To do this, we try to predic moments under physical measure from moments under risk-neutral measure using probability in the last section, similarly to [Forecasting swap rate volatility with information from swaptions, A Liu and J Xie, 2023](https://www.bis.org/publ/work1068.pdf).  
+To do this, we try to predict moments of spot price under physical measure from moments under risk-neutral measure using probability in the last section, similarly to [Forecasting swap rate volatility with information from swaptions, A Liu and J Xie, 2023](https://www.bis.org/publ/work1068.pdf).  
 
 Lasso regression is used to link physical moments with risk-neutral moments. However, due to a lack of data points. There is no meaningful result at this moment.  
