@@ -10,9 +10,18 @@ RAW_DIR = "./data_raw"
 BTC_SPOT_FILE = RAW_DIR + "/CME_BRR_latest.xlsx"
 PROCESSED_DIR = "./data_processed"
 
-def prepare_BTCUSD_spot(marketDate):
+def prepare_BTCUSD_spot(marketDate, skipIfExist):
     marketDateStr = marketDate.strftime("%Y-%m-%d")
     marketDateStrNoHyphen = marketDate.strftime("%Y%m%d")
+    PROCESSED_FILE = f"BTCUSDSPOT_{marketDateStrNoHyphen}.xlsx"
+    directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
+    output_file = directory + "/" + PROCESSED_FILE
+
+    # if output file exists already, just skip
+    if skipIfExist and os.path.isfile(output_file):
+        print(f"Skipped exporting {PROCESSED_FILE} because output file exists already.")
+        return
+
     BTC_SPOT_raw = pd.read_excel(BTC_SPOT_FILE)
 
     BTC_SPOT_raw['Date'] = pd.to_datetime(BTC_SPOT_raw['Date'])
@@ -30,11 +39,9 @@ def prepare_BTCUSD_spot(marketDate):
         df_data = pd.DataFrame({"Name": ["Spot"],
                               "Value": [BTC_SPOT]})
     
-    PROCESSED_FILE = f"BTCUSDSPOT_{marketDateStrNoHyphen}.xlsx"
     if (not df_data is None) and (len(df_data)):
-        directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
         os.makedirs(directory, exist_ok=True)
-        with pd.ExcelWriter(directory + "/" + PROCESSED_FILE) as ew:
+        with pd.ExcelWriter(output_file) as ew:
             df_config.to_excel(ew, sheet_name="Config", index=False)
             df_data.to_excel(ew, sheet_name="Data", index=False)
 
@@ -46,5 +53,5 @@ def prepare_BTCUSD_spot(marketDate):
 if __name__ == "__main__":
     marketDate = dt(2025, 6, 13)
     while marketDate < dt.now():
-        prepare_BTCUSD_spot(marketDate)
+        prepare_BTCUSD_spot(marketDate, skipIfExist=True)
         marketDate += relativedelta(days=1)

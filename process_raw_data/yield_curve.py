@@ -13,9 +13,18 @@ SOFR_FUTURES_FILE = RAW_DIR + "/SOFR_futures_latest.xlsx"
 SOFR_OIS_FILE = RAW_DIR + "/SOFR_OIS_latest.xlsx"
 PROCESSED_DIR = "./data_processed"
 
-def prepare_SOFR_market(marketDate):
+def prepare_SOFR_market(marketDate, skipIfExist):
     marketDateStr = marketDate.strftime("%Y-%m-%d")
     marketDateStrNoHyphen = marketDate.strftime("%Y%m%d")
+    PROCESSED_FILE = f"USDSOFRCSA_USD_{marketDateStrNoHyphen}.xlsx"
+    directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
+    output_file = directory + "/" + PROCESSED_FILE
+
+    # if output file exists already, just skip
+    if skipIfExist and os.path.isfile(output_file):
+        print(f"Skipped exporting {PROCESSED_FILE} because output file exists already.")
+        return
+
     sofr_raw = pd.read_excel(SOFR_FILE)
     sofr_futures_raw = pd.read_excel(SOFR_FUTURES_FILE)
     sofr_ois_raw = pd.read_excel(SOFR_OIS_FILE)
@@ -75,12 +84,10 @@ def prepare_SOFR_market(marketDate):
         df_ois_export = df_ois[['Tenor', 'Ticker', 'Type', 'Rate']]
         dfs_data.append(df_ois_export)
 
-    PROCESSED_FILE = f"USDSOFRCSA_USD_{marketDateStrNoHyphen}.xlsx"
     if len(dfs_data):
         df_data = pd.concat(dfs_data)
-        directory = PROCESSED_DIR + f"./{marketDateStrNoHyphen}"
         os.makedirs(directory, exist_ok=True)
-        with pd.ExcelWriter(directory + "/" + PROCESSED_FILE) as ew:
+        with pd.ExcelWriter(output_file) as ew:
             df_config.to_excel(ew, sheet_name="Config", index=False)
             df_data.to_excel(ew, sheet_name="Data", index=False)
 
@@ -93,5 +100,5 @@ if __name__ == "__main__":
     # marketDate = dt(2025, 7, 18)
     marketDate = dt(2025, 6, 13)
     while marketDate < dt.now():
-        prepare_SOFR_market(marketDate)
+        prepare_SOFR_market(marketDate, skipIfExist=True)
         marketDate += relativedelta(days=1)
