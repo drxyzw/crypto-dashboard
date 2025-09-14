@@ -14,7 +14,7 @@ if __name__ == "__main__":
     dfs_mkt_list = []
     while py_date < dt.now():
         market = loadMarket(py_date)
-        market_qprob = build_q_probability(market)
+        market_qprob = build_q_probability(market, skipIfExist=True)
         if not market_qprob is None:
             market = market_qprob
 

@@ -11,7 +11,7 @@ PROCESSED_DIR = "./data_processed"
 def singleDate(param):
     py_date, regularize_vol = param
     market = loadMarket(py_date)
-    market_vol = build_volatility_surface(market, regularize_vol=regularize_vol, outputSlopeCurvature=True)
+    market_vol = build_volatility_surface(market, regularize_vol=regularize_vol, outputSlopeCurvature=True, skipIfExist=True)
     if not market_vol is None:
         market = market_vol
     if not market is None:

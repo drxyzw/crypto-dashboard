@@ -476,7 +476,7 @@ def checkCalendarArbitrageOnPrice(row, df_price):
     else:
         return row['Arbitrage']
 
-def build_volatility_surface(market_dict, regularize_vol, outputSlopeCurvature):
+def build_volatility_surface(market_dict, regularize_vol, outputSlopeCurvature, skipIfExist):
     if not market_dict:
         print("Input market is empty")
         return None
@@ -484,176 +484,186 @@ def build_volatility_surface(market_dict, regularize_vol, outputSlopeCurvature):
     py_date = qlDateToPyDate(ql_date)
     YYYYMMDD = py_date.strftime("%Y%m%d")
 
-    PROCESSED_FILE = f"BTCUSDOPTION_{YYYYMMDD}.xlsx"
     directory = PROCESSED_DIR + f"./{YYYYMMDD}"
-    full_path = directory + "/" + PROCESSED_FILE
-    if not os.path.exists(full_path):
-        return None
-    
-    df_config = pd.read_excel(full_path, sheet_name="Config")
-    config_dict = df_config.set_index('Name')['Value'].to_dict()
-    df_data = pd.read_excel(full_path, sheet_name="Data")
-    if not "BTCUSD.SPOT" in market_dict.keys():
-        return None
-    asset_spot = market_dict["BTCUSD.SPOT"]
-    spotPrice = asset_spot.spotRate
+    file_flag = "_REGULARIZED" if regularize_vol else ""
+    volsurface_file = f"BTCUSDVOLSURFACE{file_flag}_{YYYYMMDD}.xlsx"
+    volsurface_output = directory + f"/{volsurface_file}"
+    impliedvol_file = f"BTCUSDIMPLIEDVOL{file_flag}_{YYYYMMDD}.xlsx"
+    impliedvol_output = directory + f"/{impliedvol_file}"
 
-    domYcName = config_dict["DomesticDiscountingCurve"]
-    assetYcName = config_dict["ForeignDiscountingCurve"]
-    if (not domYcName in market_dict.keys()) or (not assetYcName in market_dict.keys()):
-        return None
-    domYc = market_dict[domYcName]
-    assetYc = market_dict[assetYcName]
-
-    marketDateStr = config_dict['Date']
-    pyMarketDate = dt.strptime(marketDateStr, "%Y-%m-%d")
-    marketDate = pyDateToQlDate(pyMarketDate)
-
-    if FUTURE_FROM_DATA_NOT_YC:
-        df_data = implyFutureAndDomDF(df_data, marketDate)
-        if regularize_vol:
-            df_data = regularizeCallPutPrice(df_data, marketDate, impliedFuture=True,
-                                             domYc = domYc, assetYc = assetYc, 
-                                             asset_spot = asset_spot)
-        df_data["ImpliedVol"] = df_data.apply(
-            lambda x: implied_volatility(x, marketDate, impliedFuture=True,
-                                         domYc = domYc, assetYc = assetYc, 
-                                         asset_spot = asset_spot), axis=1)
+    # if output file exists already, just skip
+    if skipIfExist and os.path.isfile(volsurface_output) and os.path.isfile(impliedvol_output):
+        print(f"Skipped exporting {volsurface_file} and {impliedvol_file} because output file exists already.")
+        df_smile = pd.read_excel(volsurface_output)
     else:
-        df_data["ImpliedVol"] = df_data.apply(
-            lambda x: implied_volatility(x, marketDate, impliedFuture=False,
-                                         domYc = domYc, assetYc = assetYc, 
-                                         asset_spot = asset_spot), axis=1)
-        if FUTURE_CHECK:
+        PROCESSED_FILE = f"BTCUSDOPTION_{YYYYMMDD}.xlsx"
+        full_path = directory + "/" + PROCESSED_FILE
+        if not os.path.exists(full_path):
+            return None
+        
+        df_config = pd.read_excel(full_path, sheet_name="Config")
+        config_dict = df_config.set_index('Name')['Value'].to_dict()
+        df_data = pd.read_excel(full_path, sheet_name="Data")
+        if not "BTCUSD.SPOT" in market_dict.keys():
+            return None
+        asset_spot = market_dict["BTCUSD.SPOT"]
+        spotPrice = asset_spot.spotRate
+    
+        domYcName = config_dict["DomesticDiscountingCurve"]
+        assetYcName = config_dict["ForeignDiscountingCurve"]
+        if (not domYcName in market_dict.keys()) or (not assetYcName in market_dict.keys()):
+            return None
+        domYc = market_dict[domYcName]
+        assetYc = market_dict[assetYcName]
+    
+        marketDateStr = config_dict['Date']
+        pyMarketDate = dt.strptime(marketDateStr, "%Y-%m-%d")
+        marketDate = pyDateToQlDate(pyMarketDate)
+    
+        if FUTURE_FROM_DATA_NOT_YC:
             df_data = implyFutureAndDomDF(df_data, marketDate)
-            checkFuture(df_data, marketDate, domYc = domYc, assetYc = assetYc, 
-                                         asset_spot = asset_spot)
-
-    df_data.dropna(subset=["ImpliedVol"], inplace=True)
-    df_data["Arbitrage"] = None
-    if outputSlopeCurvature:
-        df_data["Slope"] = None
-        df_data["Curvature"] = None
-
-    dfs_smile = []
-    dfs_smile_obj = []
-    for expiryDate in df_data['ExpiryDate'].unique():
-        qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
-        if qlExpiryDate <= marketDate:
-            continue
-        df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
-        for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
-            qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
-            if qlFutureExpiryDate <= marketDate or qlFutureExpiryDate < qlExpiryDate:
+            if regularize_vol:
+                df_data = regularizeCallPutPrice(df_data, marketDate, impliedFuture=True,
+                                                 domYc = domYc, assetYc = assetYc, 
+                                                 asset_spot = asset_spot)
+            df_data["ImpliedVol"] = df_data.apply(
+                lambda x: implied_volatility(x, marketDate, impliedFuture=True,
+                                             domYc = domYc, assetYc = assetYc, 
+                                             asset_spot = asset_spot), axis=1)
+        else:
+            df_data["ImpliedVol"] = df_data.apply(
+                lambda x: implied_volatility(x, marketDate, impliedFuture=False,
+                                             domYc = domYc, assetYc = assetYc, 
+                                             asset_spot = asset_spot), axis=1)
+            if FUTURE_CHECK:
+                df_data = implyFutureAndDomDF(df_data, marketDate)
+                checkFuture(df_data, marketDate, domYc = domYc, assetYc = assetYc, 
+                                             asset_spot = asset_spot)
+    
+        df_data.dropna(subset=["ImpliedVol"], inplace=True)
+        df_data["Arbitrage"] = None
+        if outputSlopeCurvature:
+            df_data["Slope"] = None
+            df_data["Curvature"] = None
+    
+        dfs_smile = []
+        dfs_smile_obj = []
+        for expiryDate in df_data['ExpiryDate'].unique():
+            qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
+            if qlExpiryDate <= marketDate:
                 continue
-            df_data_f_expiry_date = df_data_expiry_date[
-                    (df_data_expiry_date['ExpiryDate'] == expiryDate)
-                    & (df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]
-            if FUTURE_FROM_DATA_NOT_YC:
-                f = df_data_f_expiry_date["ImpliedFuture"].values[0]
-                domDfOption = df_data_f_expiry_date["ImpliedDomDF"].values[0]
-            else:
-                domDfOption = domYc.discount(qlExpiryDate)
-                domDfUnderlying = domYc.discount(qlFutureExpiryDate)
-                assetDfUnderlying = assetYc.discount(qlFutureExpiryDate)
-                spotPrice = asset_spot.spotRate
-                f = spotPrice * assetDfUnderlying / domDfUnderlying
-                
-            # arbitrage check along strike
-            mask_call = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
-            while True: # continue arbitrage check until no arbitrage is left
-                last_call_non_arb = mask_call
-                # df_data.loc[mask_call, "Arbitrage"] = arbitrageCheck(df_data[mask_call], domDfOption, "Call")
-                df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
+            df_data_expiry_date = df_data[(df_data['ExpiryDate'] == expiryDate)]
+            for futureExpiryDate in df_data_expiry_date['FutureExpiryDate'].unique():
+                qlFutureExpiryDate = YYYYMMDDHyphenToQlDate(futureExpiryDate)
+                if qlFutureExpiryDate <= marketDate or qlFutureExpiryDate < qlExpiryDate:
+                    continue
+                df_data_f_expiry_date = df_data_expiry_date[
+                        (df_data_expiry_date['ExpiryDate'] == expiryDate)
+                        & (df_data_expiry_date['FutureExpiryDate'] == futureExpiryDate)]
+                if FUTURE_FROM_DATA_NOT_YC:
+                    f = df_data_f_expiry_date["ImpliedFuture"].values[0]
+                    domDfOption = df_data_f_expiry_date["ImpliedDomDF"].values[0]
+                else:
+                    domDfOption = domYc.discount(qlExpiryDate)
+                    domDfUnderlying = domYc.discount(qlFutureExpiryDate)
+                    assetDfUnderlying = assetYc.discount(qlFutureExpiryDate)
+                    spotPrice = asset_spot.spotRate
+                    f = spotPrice * assetDfUnderlying / domDfUnderlying
+                    
+                # arbitrage check along strike
                 mask_call = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
-                if all(last_call_non_arb.values == mask_call.values):
-                    break
-
-            mask_put = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
-            while True: # continue arbitrage check until no arbitrage is left
-                last_put_non_arb = mask_put
-                # df_data.loc[mask_put, "Arbitrage"] = arbitrageCheck(df_data[mask_put], domDfOption, "Put")
-                df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
+                while True: # continue arbitrage check until no arbitrage is left
+                    last_call_non_arb = mask_call
+                    # df_data.loc[mask_call, "Arbitrage"] = arbitrageCheck(df_data[mask_call], domDfOption, "Call")
+                    df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
+                    mask_call = ((df_data['ExpiryDate'] == expiryDate)
+                                 & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                                 & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
+                    if all(last_call_non_arb.values == mask_call.values):
+                        break
+                    
                 mask_put = ((df_data['ExpiryDate'] == expiryDate)
                              & (df_data['FutureExpiryDate'] == futureExpiryDate)
                              & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
-                if all(last_put_non_arb.values == mask_put.values):
-                    break
-
-            mask_call = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
-            df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
-            mask_call = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Call"))
-
-            mask_put = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
-            df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
-            mask_put = ((df_data['ExpiryDate'] == expiryDate)
-                         & (df_data['FutureExpiryDate'] == futureExpiryDate)
-                         & (df_data['OptionType'] == "Put"))
-
-            # volatility smile
-            dc = ql.Actual365Fixed()
-            t = dc.yearFraction(marketDate, qlExpiryDate)
-            call_strikes = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Strike"].values.astype(np.float64)
-            put_strikes = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Strike"].values.astype(np.float64)
-            call_vols = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["ImpliedVol"].values.astype(np.float64)
-            put_vols = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["ImpliedVol"].values.astype(np.float64)
-            call_arb_flags = df_data[mask_call]["Arbitrage"]
-            # call_arb_flags = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Arbitrage"]
-            # put_arb_flags = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Arbitrage"]
-            put_arb_flags = df_data[mask_put]["Arbitrage"]
-            strikes = np.concatenate((put_strikes[put_strikes < f], call_strikes[call_strikes >= f]))
-            vols = np.concatenate((put_vols[put_strikes < f], call_vols[call_strikes >= f]))
-            arb_flags = np.concatenate((put_arb_flags[put_strikes < f], call_arb_flags[call_strikes >= f]))
-            stds = vols * np.sqrt(t)
-
-            # volatility smile
-            if SMILE_INTERPOLATION == "CUBIC":
-                smileSection = ql.CubicInterpolatedSmileSection(t, strikes, stds, f)
-            elif SMILE_INTERPOLATION == "AFI":
-                baseSmileSection = ql.LinearInterpolatedSmileSection(t, strikes, stds, f)
-                moneyness = strikes / f
-                smileSection = ql.KahaleSmileSection(baseSmileSection, f, False, False, True, moneyness)
-
-            df_smile = pd.DataFrame()
-            df_smile["ExpiryDate"] = [expiryDate] * len(stds)
-            df_smile["FutureExpiryDate"] = [futureExpiryDate] * len(stds)
-            df_smile["TTM"] = [t] * len(stds)
-            df_smile["Strike"] = strikes
-            df_smile["ImpliedFuture"] = f
-            df_smile["Vol"] = vols
-            df_smile["Arbitrage"] = arb_flags
-            dfs_smile.append(df_smile)
-
-            df_smile_obj = pd.DataFrame()
-            df_smile_obj["TTM"] = [t]
-            df_smile_obj["SmileObject"] = [smileSection]
-            dfs_smile_obj.append(df_smile_obj)
-
-    df_smile = pd.concat(dfs_smile).reset_index(drop=True)
-    df_smile_obj = pd.concat(dfs_smile_obj).sort_values(by="TTM").reset_index(drop=True)
-
-    # calendar arbitrage check
-    df_smile_with_obj = df_smile.merge(df_smile_obj, on="TTM", how="left")
-    df_smile_with_obj["Arbitrage"] = df_smile_with_obj.apply(lambda x: checkCalendarArbitrageOnVolatility(x, df_smile_with_obj), axis=1)
-    df_smile = df_smile_with_obj.drop(columns="SmileObject")
-
-    df_data["Arbitrage"] = df_data.apply(lambda x: checkCalendarArbitrageOnPrice(x, df_data), axis=1)
-
-    file_flag = "_REGULARIZED" if regularize_vol else ""
-    df_smile.to_excel(directory + f"/BTCUSDVOLSURFACE{file_flag}_{YYYYMMDD}.xlsx", index=False)
-    df_data.to_excel(directory + f"/BTCUSDIMPLIEDVOL{file_flag}_{YYYYMMDD}.xlsx", index=False) # just added implied vol to option price input
+                while True: # continue arbitrage check until no arbitrage is left
+                    last_put_non_arb = mask_put
+                    # df_data.loc[mask_put, "Arbitrage"] = arbitrageCheck(df_data[mask_put], domDfOption, "Put")
+                    df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
+                    mask_put = ((df_data['ExpiryDate'] == expiryDate)
+                                 & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                                 & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
+                    if all(last_put_non_arb.values == mask_put.values):
+                        break
+                    
+                mask_call = ((df_data['ExpiryDate'] == expiryDate)
+                             & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                             & (df_data['OptionType'] == "Call") & pd.isna(df_data["Arbitrage"]))
+                df_data[mask_call] = arbitrageCheck(df_data[mask_call], domDfOption, "Call", outputSlopeCurvature = outputSlopeCurvature)
+                mask_call = ((df_data['ExpiryDate'] == expiryDate)
+                             & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                             & (df_data['OptionType'] == "Call"))
+    
+                mask_put = ((df_data['ExpiryDate'] == expiryDate)
+                             & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                             & (df_data['OptionType'] == "Put") & pd.isna(df_data["Arbitrage"]))
+                df_data[mask_put] = arbitrageCheck(df_data[mask_put], domDfOption, "Put", outputSlopeCurvature = outputSlopeCurvature)
+                mask_put = ((df_data['ExpiryDate'] == expiryDate)
+                             & (df_data['FutureExpiryDate'] == futureExpiryDate)
+                             & (df_data['OptionType'] == "Put"))
+    
+                # volatility smile
+                dc = ql.Actual365Fixed()
+                t = dc.yearFraction(marketDate, qlExpiryDate)
+                call_strikes = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Strike"].values.astype(np.float64)
+                put_strikes = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Strike"].values.astype(np.float64)
+                call_vols = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["ImpliedVol"].values.astype(np.float64)
+                put_vols = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["ImpliedVol"].values.astype(np.float64)
+                call_arb_flags = df_data[mask_call]["Arbitrage"]
+                # call_arb_flags = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Call"]["Arbitrage"]
+                # put_arb_flags = df_data_f_expiry_date[df_data_f_expiry_date["OptionType"] == "Put"]["Arbitrage"]
+                put_arb_flags = df_data[mask_put]["Arbitrage"]
+                strikes = np.concatenate((put_strikes[put_strikes < f], call_strikes[call_strikes >= f]))
+                vols = np.concatenate((put_vols[put_strikes < f], call_vols[call_strikes >= f]))
+                arb_flags = np.concatenate((put_arb_flags[put_strikes < f], call_arb_flags[call_strikes >= f]))
+                stds = vols * np.sqrt(t)
+    
+                # volatility smile
+                if SMILE_INTERPOLATION == "CUBIC":
+                    smileSection = ql.CubicInterpolatedSmileSection(t, strikes, stds, f)
+                elif SMILE_INTERPOLATION == "AFI":
+                    baseSmileSection = ql.LinearInterpolatedSmileSection(t, strikes, stds, f)
+                    moneyness = strikes / f
+                    smileSection = ql.KahaleSmileSection(baseSmileSection, f, False, False, True, moneyness)
+    
+                df_smile = pd.DataFrame()
+                df_smile["ExpiryDate"] = [expiryDate] * len(stds)
+                df_smile["FutureExpiryDate"] = [futureExpiryDate] * len(stds)
+                df_smile["TTM"] = [t] * len(stds)
+                df_smile["Strike"] = strikes
+                df_smile["ImpliedFuture"] = f
+                df_smile["Vol"] = vols
+                df_smile["Arbitrage"] = arb_flags
+                dfs_smile.append(df_smile)
+    
+                df_smile_obj = pd.DataFrame()
+                df_smile_obj["TTM"] = [t]
+                df_smile_obj["SmileObject"] = [smileSection]
+                dfs_smile_obj.append(df_smile_obj)
+    
+        df_smile = pd.concat(dfs_smile).reset_index(drop=True)
+        df_smile_obj = pd.concat(dfs_smile_obj).sort_values(by="TTM").reset_index(drop=True)
+    
+        # calendar arbitrage check
+        df_smile_with_obj = df_smile.merge(df_smile_obj, on="TTM", how="left")
+        df_smile_with_obj["Arbitrage"] = df_smile_with_obj.apply(lambda x: checkCalendarArbitrageOnVolatility(x, df_smile_with_obj), axis=1)
+        df_smile = df_smile_with_obj.drop(columns="SmileObject")
+    
+        df_data["Arbitrage"] = df_data.apply(lambda x: checkCalendarArbitrageOnPrice(x, df_data), axis=1)
+    
+        df_smile.to_excel(volsurface_output, index=False)
+        df_data.to_excel(impliedvol_output, index=False) # just added implied vol to option price input
 
     obj_flag = ".REGULARIZED" if regularize_vol else ""
     market_dict[f'BTCUSD.VOLSURFACE{obj_flag}'] = df_smile
