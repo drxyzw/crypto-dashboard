@@ -8,6 +8,8 @@ from scipy.optimize import minimize
 from scipy.stats import norm
 
 from utils.convention import *
+from utils.config import *
+
 PROCESSED_DIR = "./data_processed"
 #     if len(df_data):
 #         with pd.ExcelWriter() as ew:
@@ -124,7 +126,7 @@ def regularizeCallPutPrice(df_data, marketDate, impliedFuture, domYc = None, ass
 
             # smoothing based on time value or dCurvature
             def loss(timeValues, prices0, strikes, cp, f, domDfOption, max_density_slope):
-                spread = 5.
+                spread = MIN_TICK_PRICE
                 timeValues = np.array(timeValues)
                 undisc_intrinsic = np.maximum(f-strikes, 0.) if cp == ql.Option.Call else np.maximum(strikes - f, 0.)
                 intrinsic = domDfOption * undisc_intrinsic

@@ -9,6 +9,7 @@ ANALYZED_DIR = "./data_analyzed"
     
 if __name__ == "__main__":
     py_date = dt(2025, 6, 13)
+    # py_date = dt(2025, 8, 15)
     # py_date = dt(2025, 7, 14)
 
     dfs_moment = []

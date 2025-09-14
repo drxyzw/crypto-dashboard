@@ -9,12 +9,13 @@ PROCESSED_DIR = "./data_processed"
 
 if __name__ == "__main__":
     py_date = dt(2025, 6, 13)
+    # py_date = dt(2025, 8, 15)
     # py_date = dt(2025, 7, 14)
 
     dfs_mkt_list = []
     while py_date < dt.now():
         market = loadMarket(py_date)
-        market_qprob = build_q_probability(market, skipIfExist=True)
+        market_qprob = build_q_probability(market, skipIfExist=False)
         if not market_qprob is None:
             market = market_qprob
 

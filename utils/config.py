@@ -64,3 +64,4 @@ def timestampToDatetime(timestamp_ms):
 def datetimeToTimestamp(dt):
     return int(dt.timestamp() * 1000)
 
+MIN_TICK_PRICE=5.

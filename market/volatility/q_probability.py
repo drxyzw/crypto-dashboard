@@ -10,6 +10,7 @@ from scipy.optimize import curve_fit
 import QuantLib as ql
 
 from utils.convention import *
+from utils.config import *
 PROCESSED_DIR = "./data_processed"
 CUMUL_EPS = 1.e-5
 
@@ -22,12 +23,13 @@ def extrapolateUndiscCallPriceWithPareto(t, f, dfDomOption,
         or (not isUpper and (cumulDensity[0] >  CUMUL_EPS))):
         # fit Pareto parameter
         # undisc_call = a*(k+b)**c
+        price_mask = undic_timevalue > MIN_TICK_PRICE
         if isUpper:
-            mask = strikes_non_arb > f
+            mask = (strikes_non_arb > f) & price_mask
             x = strikes_non_arb[mask][-N_extrap:]
             y = undic_timevalue[mask][-N_extrap:]
         else:
-            mask = strikes_non_arb < f
+            mask = (strikes_non_arb < f) & price_mask
             x = strikes_non_arb[mask][:N_extrap]
             y = undic_timevalue[mask][:N_extrap]
         
