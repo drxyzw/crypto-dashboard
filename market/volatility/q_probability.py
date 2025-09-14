@@ -2,6 +2,7 @@ import QuantLib as ql
 from datetime import datetime as dt
 import pandas as pd
 import numpy as np
+import math
 import os
 from sklearn.linear_model import LinearRegression
 # from scipy.optimize import bisect
@@ -91,11 +92,11 @@ def extrapolateUndiscCallPriceWithPareto(t, f, dfDomOption,
         while ((isUpper and (cumulDensity[-1] < 1. - CUMUL_EPS))
             or (not isUpper and (cumulDensity[0] >  CUMUL_EPS))):
             if isUpper:
-                exponent10 = int(np.log10(strikes_non_arb[-1]))
+                exponent10 = math.floor(np.log10(strikes_non_arb[-1]))
                 dK = 10**(exponent10)
                 k_extend = strikes_non_arb[-1] + dK
             else:
-                exponent10 = int(np.log10(strikes_non_arb[0]))
+                exponent10 = math.floor(np.log10(strikes_non_arb[0]))
                 dK = 10**(exponent10)
                 dK = dK if strikes_non_arb[0] >= 2. * dK else (dK / 10)
                 k_extend = strikes_non_arb[0] - dK
@@ -150,10 +151,10 @@ def build_q_probability(market_dict, skipIfExist):
         full_path = directory + "/" + PROCESSED_FILE
         if not os.path.exists(full_path):
             return None
-        
+
         df_vol_data = pd.read_excel(full_path)
         df_vol_data.dropna(subset=["ImpliedVol"], inplace=True)
-    
+
         dfs_smile = []
         for expiryDate in df_vol_data['ExpiryDate'].unique():
             qlExpiryDate = YYYYMMDDHyphenToQlDate(expiryDate)
@@ -170,7 +171,7 @@ def build_q_probability(market_dict, skipIfExist):
                         # only choose call price. this should be ok because put price contribution is considered in regularization
                         # by taking average of time value of call and put prices
                         & (df_data_expiry_date['OptionType'] == "Call")]
-                    
+
                 dc = ql.Actual365Fixed()
                 t = dc.yearFraction(marketDate, qlExpiryDate)
                 f = df_data_f_expiry_date["ImpliedFuture"].values[0]
@@ -179,25 +180,25 @@ def build_q_probability(market_dict, skipIfExist):
                 vols = df_data_f_expiry_date["ImpliedVol"].values
                 prices = df_data_f_expiry_date["Price"].values
                 arb_flags = df_data_f_expiry_date["Arbitrage"].values
-    
+
                 mask_non_arb = pd.isna(arb_flags)
                 strikes_non_arb = strikes[mask_non_arb]
                 vols_non_arb = vols[mask_non_arb]
                 prices_non_arb = prices[mask_non_arb]
-    
+
                 undisc_price = prices_non_arb / dfDomOption
                 slopes = np.diff(undisc_price) / np.diff(strikes_non_arb)
                 slopes2 = (undisc_price[2:] - undisc_price[:-2]) / (strikes_non_arb[2:] - strikes_non_arb[:-2])
                 ave_strikes = 0.5 * (strikes_non_arb[:-1] + strikes_non_arb[1:])
                 curvatures = np.diff(slopes) / np.diff(ave_strikes)
-    
+
                 # reformat for cumulative density and density
                 slopes_for_cumul = [slopes[0]] + list(slopes2) + [slopes[-1]]
                 cumulDensity = 1. + np.array(slopes_for_cumul)
                 cumulDensity = np.maximum(np.minimum(cumulDensity, 1.), 0.)
                 density = np.array([curvatures[0]] + list(curvatures) + [curvatures[-1]])
                 density = np.maximum(density, 0.)
-                
+
                 # extrapolation on upper strike side with Pareto tail
                 prices_non_arb, undisc_price, strikes_non_arb, cumulDensity, vols_non_arb, density = \
                     extrapolateUndiscCallPriceWithPareto(t, f, dfDomOption,
@@ -209,7 +210,7 @@ def build_q_probability(market_dict, skipIfExist):
                                                          prices_non_arb, undisc_price, strikes_non_arb,
                                                          cumulDensity, vols_non_arb, density,
                                                          isUpper = True, N_extrap = 20)
-    
+
                 df_smile = pd.DataFrame()
                 df_smile["ExpiryDate"] = [expiryDate] * len(strikes_non_arb)
                 df_smile["FutureExpiryDate"] = [futureExpiryDate] * len(strikes_non_arb)
@@ -219,9 +220,9 @@ def build_q_probability(market_dict, skipIfExist):
                 df_smile["Vol"] = vols_non_arb
                 df_smile["CumulativeDensity"] = cumulDensity
                 df_smile["Density"] = density
-    
+
                 dfs_smile.append(df_smile)
-    
+
         df_smile = pd.concat(dfs_smile).reset_index(drop=True)
         df_smile.to_excel(qprobability_output, index=False)
 
