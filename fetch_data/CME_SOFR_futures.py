@@ -163,6 +163,7 @@ for instrument_flag in sofr_instrument_flags:
                     df = df[df.Date > latest_date]
                 # convert "unch" to 0 in Change and %Chg columns
                 df['Change'] = df["Change"].map(lambda x: 0.0 if x == "unch" else float(x) if x.isdigit() else x)
+                df.rename(columns={"%Change": '%Chg'}, inplace=True)
                 df['%Chg'] = df["%Chg"].map(lambda x: 0.0 if x == "unch" else float(x[:-1]) if x[:-1] == "%" else float(x) if x.isdigit() else x)
 
                 # insert Ticker column in front
