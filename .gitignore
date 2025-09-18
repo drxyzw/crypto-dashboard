@@ -1,4 +1,6 @@
-analysis/
+**/analysis*/
+!analysis_data/
+
 archive_unchanged_quotes/
 archive/
 bak/
@@ -7,3 +9,4 @@ experiment/
 *.pyc
 .env
 __pycache__/
+
