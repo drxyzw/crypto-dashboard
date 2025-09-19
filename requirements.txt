@@ -61,7 +61,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 pytz==2025.2
 PyYAML==6.0.2
-./local_package/QuantLib/quantlib-1.40.dev0-cp38-abi3-win_amd64.whl
+# ./local_package/QuantLib/quantlib-1.40.dev0-cp38-abi3-win_amd64.whl
 requests==2.32.4
 retrying==1.3.4
 rich==14.1.0
