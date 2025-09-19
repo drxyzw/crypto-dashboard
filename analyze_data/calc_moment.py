@@ -2,7 +2,7 @@ from datetime import datetime as dt
 import pandas as pd
 
 from market.load_market import loadMarket
-from analysis.moment.momentFromProbability import *
+from analyze_data.moment.momentFromProbability import *
 from dateutil.relativedelta import relativedelta
 
 ANALYZED_DIR = "./data_analyzed"
