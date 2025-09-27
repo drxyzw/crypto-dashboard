@@ -1,5 +1,5 @@
 # Methodology
-Here, I minimalize description of standard formula we can find in many textbooks. Rather, I focus on some items specific to this analysis.
+Here, I minimize description of standard formula we can find in many textbooks. Rather, I focus on some items specific to this analysis.
 
 ## USD SOFR Yield Curve
 Yield curve is constructed from SOFR O/N from FED, 3M-SOFR future prices below 2 years, and OIS for 2 years and above. 
