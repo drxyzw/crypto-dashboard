@@ -24,7 +24,7 @@ For a particular expiry date of option $T_o$ and end date of future $T_f$, we ha
 Put-call parity computes a compbination of future value $F_{T_f}$ and discount factor $DF_{T_o}$:  
 $C_i - P_i = DF_{T_o} (F_{T_f} - K_i)$  
 If we define $a = -DF_{T_o}$ and $b = DF_{T_o} \cdot F_{T_f}$, then  
-$C_i - P_i = a K_i - b$  
+$C_i - P_i = a K_i + b$  
 We can estimate $a$ and $b$ using a simple linear regression. After the estimation of $a$ and $b$, we can compute future value and discount factor:  
 $F_{T_f} = - \frac{b}{a}$  
 $DF_{T_o} = -a$  
