@@ -52,8 +52,8 @@ The second derivative for the density computation uses discretization of the ori
 
 
 ## BTC/USD Moment Analysis
-The goal is to predict probability of spot price at future time.  
+The goal is to predict probability of spot price at future time under physical (real) measure.  
 
 To do this, we try to predict moments of spot price under physical measure from moments under risk-neutral measure using probability in the last section, similarly to [Forecasting swap rate volatility with information from swaptions, A Liu and J Xie, 2023](https://www.bis.org/publ/work1068.pdf).  
 
-Lasso regression is used to link physical moments with risk-neutral moments. However, due to a lack of data points. There is no meaningful result at this moment.  
+Lasso regression is used to link physical moments with risk-neutral moments. However, possibly due to a lack of data points. There is no meaningful result at this moment.  
