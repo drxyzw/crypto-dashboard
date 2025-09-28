@@ -1,4 +1,4 @@
 import sys, subprocess
 
-subprocess.run([sys.executable, "analyze_data/calc_moment.py"])
-subprocess.run([sys.executable, "analyze_data/calc_regression.py"])
+subprocess.run([sys.executable, "-m", "analyze_data.calc_moment"])
+subprocess.run([sys.executable, "-m", "analyze_data.calc_regression"])
