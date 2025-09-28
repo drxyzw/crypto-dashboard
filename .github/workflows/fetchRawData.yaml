@@ -8,40 +8,22 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+    - name: checkout repo content
+      uses: actions/checkout@v2
     - name: Set up Python 3.13
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 3.13
     - name: Install dependencies
       run: |
-        cd ./.github/workflows/
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Get the number of infecteds of nationwide and by-state from GitHub of Ministry of Health Malaysia
       run: |
-        cd ./
         python ./fetch_data/SOFR.py
-    #- name: Get the number of infecteds by states from a blog of Health Director of Malaysia
-    #  run: |
-    #    cd ./
-    #    python dataFromHealthDirectorBlog.py
 
-    #- name: Get the number of nationwide total from The Star Online
-    #  run: |
-    #    cd ./
-    #    python dataFromStarOnline.py
     - name: Export the above results to GitHub repository
       env:
         GIT_OWNER_EMAIL: ${{ secrets.GIT_OWNER_EMAIL }}
@@ -51,7 +33,7 @@ jobs:
         git config user.name "drxyzw"
         if [[ `git status --porcelain` ]]; then
           git add .
-          git commit -a -m "Automatically updating CSV data"
+          git commit -a -m "Automatically updating raw market quote data"
           git remote rm origin
           git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
           git push origin HEAD:master
