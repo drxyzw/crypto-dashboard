@@ -3,6 +3,7 @@
 name: "Fetching raw data from external website"
 
 on:
+  push:
   schedule:
    - cron: "0 0 * * 3,6" # every Wednesday and Saturday
 
