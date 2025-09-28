@@ -23,7 +23,7 @@ jobs:
         pip install -r requirements.txt
     - name: Get the number of infecteds of nationwide and by-state from GitHub of Ministry of Health Malaysia
       run: |
-        python ./fetch_data/SOFR.py
+        python -m fetch_data.fetch_all
 
     - name: Export the above results to GitHub repository
       env:
