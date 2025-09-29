@@ -11,7 +11,7 @@ where $F$ is future price, $S_0$ is spot price, $t$ is year fraction from today 
 
 ## BTC/USD Volatility Surface
 Implied volatility is computed with put price for strike below future price and call price for strike above future.  
-Arbitrage points are detedced for call spread, butterfly, and calendar. These points can be toggled.
+Arbitrage points are detedced for call spread, butterfly, and calendar. These points can be toggled on the dashboard.
 
 ### Estimattion of future values and discount factors from a list of option quotes
 One may think of using the future values from quotes of BTC/USD futures, and discount factor from SOFR curve.  
