@@ -1,6 +1,6 @@
 # Crypto-dashboard
 
-This dashboard analyzes BTC/USD forward curve and implied volatility surface. 
+This dashboard analyzes BTC/USD future curve and implied volatility surface. 
 
 It also provides risk neutral probability and its moments, and regression analysis against realized moments of spot price. 
 
