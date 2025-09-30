@@ -8,7 +8,7 @@ import pandas as pd
 import shutil
 
 import json
-from utils.config import datetimeToTimestamp, timestampToDatetime
+from utils.config import timestampToDatetime, selenium_options
 
 reference_rate = {
     "BTC": "BRR",
@@ -28,9 +28,7 @@ url_dict = {
     },
 }
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=selenium_options)
 
 def fetch_CME_crypto_reference_rate(assetName):
     DIR = "./data_raw"

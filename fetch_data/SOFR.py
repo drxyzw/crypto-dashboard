@@ -8,8 +8,7 @@ import pandas as pd
 import shutil
 from io import StringIO
 
-import json
-from utils.config import datetimeToTimestamp, timestampToDatetime
+from utils.config import selenium_options
 
 DIR = "./data_raw"
 LATEST_FILE = "SOFR_latest.xlsx"
@@ -29,9 +28,7 @@ OUTPUT_FILE = "SOFR_" + loadDate + ".xlsx"
 
 url = "https://www.newyorkfed.org/markets/reference-rates/sofr"
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=selenium_options)
 
 result_dfs = [] if df_latest is None else [df_latest]
 

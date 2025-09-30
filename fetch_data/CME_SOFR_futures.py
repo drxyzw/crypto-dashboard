@@ -24,8 +24,6 @@ def scroll_to_load_all(driver):
         if new_height == last_height:
             break
         last_height = new_height
-        
-
 
 DIR = "./data_raw"
 LATEST_FILE = "SOFR_futures_latest.xlsx"
@@ -42,9 +40,7 @@ loadDateStr = loadDate.isoformat().replace(":", "")
 loadDateStr = loadDateStr[:17] # YYYY-MM-DDTHHMMSS
 OUTPUT_FILE = "SOFR_futures_" + loadDateStr + ".xlsx"
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=selenium_options)
 
 dfs = [] if df_latest is None else [df_latest]
 count = 0

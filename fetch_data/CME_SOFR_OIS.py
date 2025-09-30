@@ -11,6 +11,8 @@ import shutil
 import pandas as pd
 from io import StringIO
 
+from utils.config import selenium_options
+
 # Plan
 # 1. Load latest data if existss. Get dates
 # 2. From website, only fetch dates which are not covered in latest file #1
@@ -34,12 +36,7 @@ OUTPUT_FILE = "SOFR_OIS_" + loadDate + ".xlsx"
 
 url = "https://www.cmegroup.com/trading/interest-rates/cleared-otc-sofr-swaps.html"
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-# options.add_argument("headless")
-# options.add_argument("disable-gui")
-
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=selenium_options)
 
 dates = []
 tenors = []

@@ -8,6 +8,7 @@ import time
 import os
 import shutil
 import pandas as pd
+from utils.config import selenium_options
 
 BASE_OPTION_URL = {
     "BTC": "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.options.html",
@@ -41,12 +42,7 @@ def fetch_CME_crypto_options(assetName):
 
     url_base = BASE_OPTION_URL[assetName]
 
-    options = webdriver.ChromeOptions()
-    options.add_experimental_option("detach", False)
-    # options.add_argument("headless")
-    # options.add_argument("disable-gui")
-
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(options=selenium_options)
 
     dates = []
     optionTypes = []
