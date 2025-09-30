@@ -11,7 +11,7 @@ where $F$ is future price, $S_0$ is spot price, $t$ is year fraction from today 
 
 ## BTC/USD Volatility Surface
 Implied volatility is computed with put price for strike below future price and call price for strike above future.  
-Arbitrage points are detedced for call spread, butterfly, and calendar. These points can be toggled.
+Arbitrage points are detedced for call spread, butterfly, and calendar. These points can be toggled on the dashboard.
 
 ### Estimattion of future values and discount factors from a list of option quotes
 One may think of using the future values from quotes of BTC/USD futures, and discount factor from SOFR curve.  
@@ -29,7 +29,7 @@ We can estimate $a$ and $b$ using a simple linear regression. After the estimati
 $F_{T_f} = - \frac{b}{a}$  
 $DF_{T_o} = -a$  
   
-Now, we have option maturity $T_o$, discount factor $DF_{T_o}$ (correspoding to discount rate), future expory $T_f$, future value $F_{T_f}$, option price ($C_i$ cand $P_i$), and strike $K_i$. Therefore, we can imply volatility $\sigma_{T_o}(K_i)$ using a standard Black-Scholes formula.
+Now, we have option maturity $T_o$, discount factor $DF_{T_o}$ (correspoding to discount rate), future expiry $T_f$, future value $F_{T_f}$, option price ($C_i$ and $P_i$), and strike $K_i$. Therefore, we can imply volatility $\sigma_{T_o}(K_i)$ using a standard Black-Scholes formula.
 
 ## BTC/USD Risk-Neutral Probability
 Risk Neutral Probability density function is implied from Breeden-Litzenberger formula:
@@ -44,7 +44,7 @@ To address the issue, the orginal undiscounted option price $\hat{V}(S,T,k)$ is 
 
 $L(\{V(k)\};\{\hat{V}(k)\}) = \int dk\frac{1}{2D^2}[\frac{\partial^2}{\partial k^2}V(k)]^2 + \int dk\frac{1}{2s^2}(V(k)-\hat{V}(k))^2$
   
-where $s$ is USD5 and $D$ is max value of slope of density function of log-normal density assuming volatility implied from ATM price $\hat{V}(k=F)$.
+where $s$ is USD5 and $D$ is max value of slope of density function. Here we assume a log-normal density and volatility implied from ATM price $\hat{V}(k=F)$.
 
 The minimization problem is solved after the loss function is discretized along strike.  
 
