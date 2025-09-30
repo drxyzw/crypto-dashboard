@@ -10,6 +10,8 @@ import pandas as pd
 from bs4 import BeautifulSoup 
 from io import StringIO
 
+from utils.config import selenium_options
+
 def convertRate(x):
     x = x.strip()
     try:
@@ -47,12 +49,7 @@ keepOpen = True
 
 url_base = "https://www.global-rates.com/en/interest-rates/cme-term-sofr/"
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", False)
-# options.add_argument("headless")
-# options.add_argument("disable-gui")
-
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=selenium_options)
 
 dfs = [] if df_latest is None else [df_latest]
 
