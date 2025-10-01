@@ -3,7 +3,7 @@
 name: "Fetching raw data from external website"
 
 on:
-  push:
+  workflow_dispatch:
   schedule:
    - cron: "0 0 * * 3,6" # every Wednesday and Saturday
 
@@ -21,7 +21,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Get the number of infecteds of nationwide and by-state from GitHub of Ministry of Health Malaysia
+    - name: Fetch raw market data from external websites
       run: |
         python -m fetch_data.fetch_all
 
