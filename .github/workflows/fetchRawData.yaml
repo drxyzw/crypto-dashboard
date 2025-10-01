@@ -24,6 +24,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Clean up Chrome instances not to conflict with with a new instances during scraping
+      run: |
+        pkill -9 chrome || true
+        pkill -9 chromedriver || true
+        
     - name: Fetch raw market data from external websites
       run: |
         python -u -m fetch_data.fetch_all
