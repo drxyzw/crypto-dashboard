@@ -32,7 +32,6 @@ jobs:
       env:
         GIT_OWNER_EMAIL: ${{ secrets.GIT_OWNER_EMAIL }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
       run: |
         git config user.email "$GIT_OWNER_EMAIL"
         git config user.name "drxyzw"
@@ -42,7 +41,6 @@ jobs:
           git remote rm origin
           git remote add origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push origin HEAD:master
-          # git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
         else
           echo 'there is no change'
         fi
