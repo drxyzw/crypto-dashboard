@@ -30,7 +30,7 @@ jobs:
         GIT_OWNER_EMAIL: ${{ secrets.GIT_OWNER_EMAIL }}
         PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
       run: |
-        git config user.email "$GIT_OWNER_EMAIL"
+        git config user.email $GIT_OWNER_EMAIL
         git config user.name "drxyzw"
         if [[ `git status --porcelain` ]]; then
           git add .
