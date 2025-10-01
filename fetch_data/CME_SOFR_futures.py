@@ -173,7 +173,7 @@ for instrument_flag in sofr_instrument_flags:
     print(f"Future tenor type: {instrument_flag}: Finished.")
 
 result_df = pd.concat(dfs, axis=0)
-if len(df) > 0:
+if len(result_df) > 0:
     result_df = result_df.drop_duplicates(['Ticker', 'Date'])
     result_df.to_excel(DIR + "/" + OUTPUT_FILE, index=False)
 

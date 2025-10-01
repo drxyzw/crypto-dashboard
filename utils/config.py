@@ -1,7 +1,7 @@
 from selenium import webdriver
 import tempfile
 selenium_options = webdriver.ChromeOptions()
-selenium_options.add_argument("--headless=new")
+# selenium_options.add_argument("--headless=new")
 selenium_options.add_argument("--no-sandbox")
 selenium_options.add_argument("--disable-dev-shm-usage")
 selenium_options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
