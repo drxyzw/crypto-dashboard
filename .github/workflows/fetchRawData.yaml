@@ -30,14 +30,16 @@ jobs:
         GIT_OWNER_EMAIL: ${{ secrets.GIT_OWNER_EMAIL }}
         PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
       run: |
-        git config user.email $GIT_OWNER_EMAIL
-        git config user.name "drxyzw"
+        # git config user.email $GIT_OWNER_EMAIL
+        # git config user.name "drxyzw"
+        git config user.name BOT
         if [[ `git status --porcelain` ]]; then
           git add .
-          git commit -a -m "Automatically updating raw market quote data"
-          git remote rm origin
-          git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
-          git push origin HEAD:master
+          git commit -a -m "[BOT] Automatically updating raw market quote data"
+          git push origin master
+          # git remote rm origin
+          # git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
+          # git push origin HEAD:master
         else
           echo 'there is no change'
         fi
