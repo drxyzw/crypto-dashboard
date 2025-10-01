@@ -7,6 +7,9 @@ on:
   schedule:
    - cron: "0 0 * * 3,6" # every Wednesday and Saturday
 
+permission:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,15 +35,14 @@ jobs:
         # PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
       run: |
         git config user.email "$GIT_OWNER_EMAIL"
-        git config user.email
         git config user.name "drxyzw"
         if [[ `git status --porcelain` ]]; then
           git add .
           git commit -a -m "Automatically updating raw market quote data"
           git remote rm origin
-          git remote add origin https://x-access-token:${GITHUB_TOKEN}@github.com/drxyzw/crypto-dashboard.git
-          # git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
+          git remote add origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push origin HEAD:master
+          # git remote add origin https://drxyzw:$PUSH_TOKEN@github.com/drxyzw/crypto-dashboard.git
         else
           echo 'there is no change'
         fi
