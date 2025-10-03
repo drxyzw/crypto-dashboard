@@ -8,7 +8,7 @@ import pandas as pd
 import shutil
 from io import StringIO
 
-from utils.config import selenium_options
+from utils.config import makeSeleniumOption
 
 DIR = "./data_raw"
 LATEST_FILE = "SOFR_latest.xlsx"
@@ -28,7 +28,7 @@ OUTPUT_FILE = "SOFR_" + loadDate + ".xlsx"
 
 url = "https://www.newyorkfed.org/markets/reference-rates/sofr"
 
-driver = webdriver.Chrome(options=selenium_options)
+driver = webdriver.Chrome(options=makeSeleniumOption())
 
 result_dfs = [] if df_latest is None else [df_latest]
 

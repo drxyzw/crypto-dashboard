@@ -11,7 +11,7 @@ import shutil
 import pandas as pd
 from io import StringIO
 
-from utils.config import selenium_options
+from utils.config import makeSeleniumOption
 
 # Plan
 # 1. Load latest data if existss. Get dates
@@ -36,7 +36,7 @@ OUTPUT_FILE = "SOFR_OIS_" + loadDate + ".xlsx"
 
 url = "https://www.cmegroup.com/trading/interest-rates/cleared-otc-sofr-swaps.html"
 
-driver = webdriver.Chrome(options=selenium_options)
+driver = webdriver.Chrome(options=makeSeleniumOption())
 
 dates = []
 tenors = []

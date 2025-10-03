@@ -10,7 +10,7 @@ import os
 import shutil
 import pandas as pd
 
-from utils.config import selenium_options
+from utils.config import makeSeleniumOption
 
 BASE_FUTURE_URL = {
     "BTC": "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.html",
@@ -44,7 +44,7 @@ def fetch_CME_crypto_futures(assetName):
 
     url_base = BASE_FUTURE_URL[assetName]
 
-    driver = webdriver.Chrome(options=selenium_options)
+    driver = webdriver.Chrome(options=makeSeleniumOption())
 
     dates = []
     expiries = []

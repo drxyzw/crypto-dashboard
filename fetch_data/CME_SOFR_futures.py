@@ -40,7 +40,7 @@ loadDateStr = loadDate.isoformat().replace(":", "")
 loadDateStr = loadDateStr[:17] # YYYY-MM-DDTHHMMSS
 OUTPUT_FILE = "SOFR_futures_" + loadDateStr + ".xlsx"
 
-driver = webdriver.Chrome(options=selenium_options)
+driver = webdriver.Chrome(options=makeSeleniumOption())
 
 dfs = [] if df_latest is None else [df_latest]
 count = 0
