@@ -4,11 +4,10 @@ import random
 
 def makeSeleniumOption():
     selenium_options = webdriver.ChromeOptions()
-    # selenium_options.add_argument("--headless=new")
     selenium_options.add_argument("--no-sandbox")
     selenium_options.add_argument("--disable-dev-shm-usage")
     # selenium_options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
-    selenium_options.add_argument(f"--remote-debugging-port={random.randint(9222, 9999)}")
+    # selenium_options.add_argument(f"--remote-debugging-port={random.randint(9222, 9999)}")
     selenium_options.add_experimental_option("detach", False)
 
     return selenium_options
