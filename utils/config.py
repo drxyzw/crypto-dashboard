@@ -1,18 +1,30 @@
 from selenium import webdriver
 import tempfile
 import random
+from datetime import datetime
+import os
 
+def isRunOnGitHubActions():
+    return os.environ.get("GITHUB_ACTIONS").upper() == "TRUE"
+    
 def makeSeleniumOption():
     selenium_options = webdriver.ChromeOptions()
     selenium_options.add_argument("--no-sandbox")
     selenium_options.add_argument("--disable-dev-shm-usage")
-    # selenium_options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
-    # selenium_options.add_argument(f"--remote-debugging-port={random.randint(9222, 9999)}")
-    selenium_options.add_experimental_option("detach", False)
+    if isRunOnGitHubActions():
+        selenium_options.add_argument("--disable-gpu")
+        selenium_options.add_argument("--disable-extensions")
+        selenium_options.add_argument("--disable-infobars")
+        selenium_options.add_argument("--start-maximized")
+        selenium_options.add_argument("--window-size=1920,1080")
+        selenium_options.add_argument("--remote-debugging-port=9222")
+        selenium_options.add_argument("--user-data-dir=" + tempfile.mkdtemp())
+        selenium_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        selenium_options.add_experimental_option("useAutomationExtension", False)
+        selenium_options.add_experimental_option("detach", False)
 
     return selenium_options
 
-from datetime import datetime
 
 sofr_instrument_flags = [
     "SL", # 1-month SOFR futures
