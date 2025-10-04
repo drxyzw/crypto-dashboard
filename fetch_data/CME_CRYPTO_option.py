@@ -84,6 +84,7 @@ def fetch_CME_crypto_options(assetName):
     for i_type, typeChoiceID in enumerate(typeChoiceIDs):
         url_type = url_base + f'#optionProductId={typeChoiceID}'
         driver.get(url_type)
+        time.sleep(2)
         driver.refresh()
         # second load to get expiry choices
         ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
@@ -94,6 +95,7 @@ def fetch_CME_crypto_options(assetName):
         for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
             url_type_expiry = url_type + f'&optionExpiration={expiryChoiceID}'
             driver.get(url_type_expiry)
+            time.sleep(2)
             driver.refresh()
 
             ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
@@ -115,6 +117,7 @@ def fetch_CME_crypto_options(assetName):
                     while retries <= RETRY_TIMES:
                         try:
                             driver.get(url_type_expiry_date)
+                            time.sleep(2)
                             driver.refresh()
                             ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
                             break
