@@ -162,6 +162,7 @@ def fetch_CME_crypto_options(assetName):
 
                         calls_estimated_volume.append(tds[0])
                         calls_prior_day_oi.append(tds[1])
+                        print(f"tds[2]: {tds[2]}")
                         call_high, call_low = tds[2].split('\n')
                         calls_high.append(call_high)
                         calls_low.append(call_low)
