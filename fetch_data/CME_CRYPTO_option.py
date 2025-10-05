@@ -156,7 +156,7 @@ def fetch_CME_crypto_options(assetName):
                         );
                         """)
                     df_temp = pd.DataFrame(trs)
-                    trs.to_excel("temp_option.xlsx", index=False)
+                    df_temp.to_excel("temp_option.xlsx", index=False)
                     for tds in trs:
                         dates.append(dt.strftime(evalDate, "%Y-%m-%d"))
                         optionTypes.append(typeChoices[i_type])
