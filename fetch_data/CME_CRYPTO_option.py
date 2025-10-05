@@ -8,13 +8,14 @@ import time
 import os
 import shutil
 import pandas as pd
-from utils.config import makeSeleniumOption
+from utils.config import makeSeleniumOption, isRunOnGitHubActions
 
 BASE_OPTION_URL = {
     "BTC": "https://www.cmegroup.com/markets/cryptocurrencies/bitcoin/bitcoin.settlements.options.html",
     "ETH": "https://www.cmegroup.com/markets/cryptocurrencies/ether/ether.settlements.options.html",
 }
 
+waiting_multiplier = 3 if isRunOnGitHubActions() else 1
 
 # Plan
 # 1. Load latest data if existss. Get dates
@@ -75,7 +76,7 @@ def fetch_CME_crypto_options(assetName):
     driver.get(url_base)
 
     # first load to get option type choices
-    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+    ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
     labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
     typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
     typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
@@ -87,12 +88,12 @@ def fetch_CME_crypto_options(assetName):
         retries = 0
         while retries <= RETRY_TIMES:
             try:
-                driver = webdriver.Chrome(options=makeSeleniumOption())
+                # driver = webdriver.Chrome(options=makeSeleniumOption())
                 driver.get(url_type)
                 time.sleep(2)
                 driver.refresh()
                 # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-                ret = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".main-table-wrapper")))
+                ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".main-table-wrapper")))
                 break
             except Exception as e:
                 retries += 1
@@ -108,11 +109,11 @@ def fetch_CME_crypto_options(assetName):
             retries = 0
             while retries <= RETRY_TIMES:
                 try:
-                    driver = webdriver.Chrome(options=makeSeleniumOption())
+                    # driver = webdriver.Chrome(options=makeSeleniumOption())
                     driver.get(url_type_expiry)
                     time.sleep(2)
                     driver.refresh()
-                    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
+                    ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
                     break
                 except Exception as e:
                     retries += 1
@@ -136,11 +137,11 @@ def fetch_CME_crypto_options(assetName):
                     retries = 0
                     while retries <= RETRY_TIMES:
                         try:
-                            driver = webdriver.Chrome(options=makeSeleniumOption())
+                            # driver = webdriver.Chrome(options=makeSeleniumOption())
                             driver.get(url_type_expiry_date)
                             time.sleep(2)
                             driver.refresh()
-                            ret = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".main-table-wrapper")))
+                            ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".main-table-wrapper")))
                             break
                         except Exception as e:
                             retries += 1
@@ -150,7 +151,7 @@ def fetch_CME_crypto_options(assetName):
                     n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
                     loadAllButtons = driver.find_elements(By.CSS_SELECTOR, ".primary.load-all.btn.btn-")
                     if loadAllButtons:
-                        loadAllButton = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".primary.load-all.btn.btn-")))
+                        loadAllButton = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".primary.load-all.btn.btn-")))
                         # loadAllButton.click() fails due to overlay issue
                         driver.execute_script("arguments[0].click();", loadAllButton)
                         def isNumTrTableChange(dr):
@@ -161,7 +162,7 @@ def fetch_CME_crypto_options(assetName):
                             else:
                                 return False
                         # WebDriverWait(driver, 20).until(lambda dr: len(dr.find_element(By.CLASS_NAME, "main-table-wrapper").text) > len(textBeforeLoadAll))
-                        WebDriverWait(driver, 20).until(isNumTrTableChange)
+                        WebDriverWait(driver, 20 * waiting_multiplier).until(isNumTrTableChange)
 
                     trs = driver.execute_script(
                         """
