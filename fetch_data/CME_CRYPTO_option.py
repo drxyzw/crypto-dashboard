@@ -90,10 +90,13 @@ def fetch_CME_crypto_options(assetName):
                 driver.get(url_type)
                 time.sleep(2)
                 driver.refresh()
-                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                ret = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".main-table-wrapper")))
                 break
             except Exception as e:
                 retries += 1
+        if retries > RETRY_TIMES:
+            print("main-table-wrapper not found")
         labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
         expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
         expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
@@ -125,10 +128,12 @@ def fetch_CME_crypto_options(assetName):
                             driver.get(url_type_expiry_date)
                             time.sleep(2)
                             driver.refresh()
-                            ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                            ret = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".main-table-wrapper")))
                             break
                         except Exception as e:
                             retries += 1
+                    if retries > RETRY_TIMES:
+                        print(".main-table-wrapper not found")
 
                     n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
                     loadAllButtons = driver.find_elements(By.CSS_SELECTOR, ".primary.load-all.btn.btn-")
