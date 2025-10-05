@@ -83,11 +83,17 @@ def fetch_CME_crypto_options(assetName):
 
     for i_type, typeChoiceID in enumerate(typeChoiceIDs):
         url_type = url_base + f'#optionProductId={typeChoiceID}'
-        driver.get(url_type)
-        time.sleep(2)
-        driver.refresh()
         # second load to get expiry choices
-        ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+        retries = 0
+        while retries <= RETRY_TIMES:
+            try:
+                driver.get(url_type)
+                time.sleep(2)
+                driver.refresh()
+                ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+                break
+            except Exception as e:
+                retries += 1
         labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
         expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
         expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
@@ -121,24 +127,15 @@ def fetch_CME_crypto_options(assetName):
                             driver.refresh()
                             ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
                             break
-                    # if i_exp != 0:
-                    #     labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
-                    #     expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
-                    #     expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
-                    # driver.execute_script("arguments[0].click();", expiryItems[i_exp])
                         except Exception as e:
                             retries += 1
 
                     n_tr_table_before_load_all = len(ret.find_elements(By.TAG_NAME, "tr"))
-                    # textBeforeLoadAll = ret.text
-                    # textBeforeLoadAll = ret.text
                     loadAllButtons = driver.find_elements(By.CSS_SELECTOR, ".primary.load-all.btn.btn-")
                     if loadAllButtons:
                         loadAllButton = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".primary.load-all.btn.btn-")))
                         # loadAllButton.click() fails due to overlay issue
                         driver.execute_script("arguments[0].click();", loadAllButton)
-                        # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
-                        # WebDriverWait(driver, 20).until(lambda x: ret.text != textBeforeLoadAll)
                         def isNumTrTableChange(dr):
                             r = dr.find_elements(By.CLASS_NAME, "main-table-wrapper")
                             if len(r) > 0:
