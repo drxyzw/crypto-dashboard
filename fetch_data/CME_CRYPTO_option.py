@@ -97,17 +97,26 @@ def fetch_CME_crypto_options(assetName):
                 retries += 1
         if retries > RETRY_TIMES:
             print("main-table-wrapper not found")
+
         labelExpiry = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Expiration']")
         expiryItems = labelExpiry.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
         expiryChoices = [item.get_attribute("textContent").strip() for item in expiryItems]
         expiryChoiceIDs = [item.get_attribute("data-value").strip() for item in expiryItems]
         for i_exp, expiryChoiceID in enumerate(expiryChoiceIDs):
             url_type_expiry = url_type + f'&optionExpiration={expiryChoiceID}'
-            driver.get(url_type_expiry)
-            time.sleep(2)
-            driver.refresh()
+            retries = 0
+            while retries <= RETRY_TIMES:
+                try:
+                    driver.get(url_type_expiry)
+                    time.sleep(2)
+                    driver.refresh()
+                    ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
+                    break
+                except Exception as e:
+                    retries += 1
+            if retries > RETRY_TIMES:
+                print(".trade-date-row.row not found")
 
-            ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".trade-date-row.row")))
             labelDate = driver.find_element(By.XPATH, "//label[contains(@class, 'form-label') and normalize-space(text())='Trade date']")
             DateItems = labelDate.find_element(By.XPATH, "..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
             DateChoices = [dt.strptime(item.get_attribute("data-value").strip(), "%m/%d/%Y") for item in DateItems]
@@ -150,6 +159,7 @@ def fetch_CME_crypto_options(assetName):
                                 return False
                         # WebDriverWait(driver, 20).until(lambda dr: len(dr.find_element(By.CLASS_NAME, "main-table-wrapper").text) > len(textBeforeLoadAll))
                         WebDriverWait(driver, 20).until(isNumTrTableChange)
+
                     trs = driver.execute_script(
                         """
                         const rows = document.querySelectorAll(".main-table-wrapper table tbody tr");
