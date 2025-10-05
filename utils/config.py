@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 
 def isRunOnGitHubActions():
-    return os.environ.get("GITHUB_ACTIONS").upper() == "TRUE"
+    return isinstance(os.environ.get("GITHUB_ACTIONS"), str) and os.environ.get("GITHUB_ACTIONS").upper() == "TRUE"
     
 def makeSeleniumOption():
     selenium_options = webdriver.ChromeOptions()
