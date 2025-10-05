@@ -155,35 +155,84 @@ def fetch_CME_crypto_options(assetName):
                             Array.from(row.querySelectorAll("td")).map(td => td.innerText.trim())
                         );
                         """)
-                    df_temp = pd.DataFrame(trs)
-                    df_temp.to_excel("temp_option.xlsx", index=False)
+                    # df_temp = pd.DataFrame(trs)
+                    # df_temp.to_excel("temp_option.xlsx", index=False)
                     for tds in trs:
                         dates.append(dt.strftime(evalDate, "%Y-%m-%d"))
                         optionTypes.append(typeChoices[i_type])
                         expiries.append(expiryChoices[i_exp])
 
-                        calls_estimated_volume.append(tds[0])
-                        calls_prior_day_oi.append(tds[1])
-                        print(f"tds[2]: {tds[2]}")
-                        call_high, call_low = tds[2].split('\n')
+                        i_col = 0
+                        calls_estimated_volume.append(tds[i_col])
+                        i_col += 1
+                        calls_prior_day_oi.append(tds[i_col])
+                        i_col += 1
+                        if len(tds[i_col].split('\n')) == 2:
+                            # HIGH / LOW
+                            call_high, call_low = tds[i_col].split('\n')
+                            i_col += 1
+                        else:
+                            # HIGH, LOW
+                            call_high = tds[i_col]
+                            i_col += 1
+                            call_low = tds[i_col]
+                            i_col += 1
                         calls_high.append(call_high)
                         calls_low.append(call_low)
-                        call_open, call_last = tds[3].split('\n')
+
+                        if len(tds[i_col].split('\n')) == 2:
+                            # OPEN / LAST
+                            call_open, call_last = tds[i_col].split('\n')
+                            i_col += 1
+                        else:
+                            # OPEN,  LAST
+                            call_open = tds[i_col]
+                            i_col += 1
+                            call_last = tds[i_col]
+                            i_col += 1
                         calls_open.append(call_open)
                         calls_last.append(call_last)
-                        calls_settle.append(tds[4])
-                        calls_change.append(tds[5])
-                        strikes.append(tds[6])
-                        puts_change.append(tds[7])
-                        puts_settle.append(tds[8])
-                        put_open, put_last = tds[9].split('\n')
+
+                        calls_settle.append(tds[i_col])
+                        i_col += 1
+                        calls_change.append(tds[i_col])
+                        i_col += 1
+                        strikes.append(tds[i_col])
+                        i_col += 1
+                        puts_change.append(tds[i_col])
+                        i_col += 1
+                        puts_settle.append(tds[i_col])
+                        i_col += 1
+
+                        if len(tds[i_col].split('\n')) == 2:
+                            # OPEN / LAST
+                            put_open, put_last = tds[i_col].split('\n')
+                            i_col += 1
+                        else:
+                            # OPEN,  LAST
+                            put_open = tds[i_col]
+                            i_col += 1
+                            put_last = tds[i_col]
+                            i_col += 1
                         puts_open.append(put_open)
                         puts_last.append(put_last)
-                        put_high, put_low = tds[10].split('\n')
+
+                        if len(tds[i_col].split('\n')) == 2:
+                            # HIGH / LOW
+                            put_high, put_low = tds[i_col].split('\n')
+                            i_col += 1
+                        else:
+                            # LOW, HIGH
+                            put_low = tds[i_col]
+                            i_col += 1
+                            put_high = tds[i_col]
+                            i_col += 1
                         puts_high.append(put_high)
                         puts_low.append(put_low)
-                        puts_prior_day_oi.append(tds[11])
-                        puts_estimated_volume.append(tds[12])
+
+                        puts_prior_day_oi.append(tds[i_col])
+                        i_col += 1
+                        puts_estimated_volume.append(tds[i_col])
                         counts.append(count)
                         count += 1
 
