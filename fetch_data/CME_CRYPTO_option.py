@@ -87,6 +87,7 @@ def fetch_CME_crypto_options(assetName):
         retries = 0
         while retries <= RETRY_TIMES:
             try:
+                driver = webdriver.Chrome(options=makeSeleniumOption())
                 driver.get(url_type)
                 time.sleep(2)
                 driver.refresh()
@@ -107,6 +108,7 @@ def fetch_CME_crypto_options(assetName):
             retries = 0
             while retries <= RETRY_TIMES:
                 try:
+                    driver = webdriver.Chrome(options=makeSeleniumOption())
                     driver.get(url_type_expiry)
                     time.sleep(2)
                     driver.refresh()
@@ -134,6 +136,7 @@ def fetch_CME_crypto_options(assetName):
                     retries = 0
                     while retries <= RETRY_TIMES:
                         try:
+                            driver = webdriver.Chrome(options=makeSeleniumOption())
                             driver.get(url_type_expiry_date)
                             time.sleep(2)
                             driver.refresh()
