@@ -74,10 +74,24 @@ def fetch_CME_crypto_options(assetName):
     # In options, dates are given per expiry (no date is shown after expiry)
     # So, first select by expiry. Then, select date.
     # get date list
-    driver.get(url_base)
 
     # first load to get option type choices
-    ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+    retries = 0
+    while retries <= RETRY_TIMES:
+        try:
+            driver.get(url_base)
+            time.sleep(2)
+            driver.refresh()
+            # ret = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "main-table-wrapper")))
+            ret = WebDriverWait(driver, 20 * waiting_multiplier).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".main-table-wrapper")))
+            break
+        except Exception as e:
+            retries += 1
+            print(f"Retrying... {retries} times")
+            driver = webdriver.Chrome(options=makeSeleniumOption())
+    if retries > RETRY_TIMES:
+        print("main-table-wrapper not found")
+
     labelType = driver.find_element(By.XPATH, "//span[contains(@class, 'button-text') and normalize-space(text())='Options']")
     typeItems = labelType.find_element(By.XPATH, "../..").find_elements(By.CSS_SELECTOR, ".dropdown-item.dropdown-item")
     typeChoices = [item.get_attribute("textContent").strip() for item in typeItems]
