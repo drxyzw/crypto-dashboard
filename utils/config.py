@@ -17,6 +17,7 @@ def makeSeleniumOption():
         selenium_options.add_argument("--disable-infobars")
         selenium_options.add_argument("--start-maximized")
         selenium_options.add_argument("--window-size=1920,1080")
+        selenium_options.add_argument("--disable-features=VizDisplayCompositor")
         selenium_options.add_argument("--remote-debugging-port=9222")
         selenium_options.add_argument("--user-data-dir=" + tempfile.mkdtemp())
         selenium_options.add_experimental_option("excludeSwitches", ["enable-automation"])
