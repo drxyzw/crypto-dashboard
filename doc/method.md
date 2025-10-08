@@ -44,7 +44,7 @@ To address the issue, the orginal undiscounted option price $\hat{V}(S,T,k)$ is 
 
 $L(\{V(k)\};\{\hat{V}(k)\}) = \int dk\frac{1}{2D^2}[\frac{\partial^2}{\partial k^2}V(k)]^2 + \int dk\frac{1}{2s^2}(V(k)-\hat{V}(k))^2$
   
-where $s$ is USD5 and $D$ is max value of slope of density function. Here we assume a log-normal density and volatility implied from ATM price $\hat{V}(k=F)$.
+where $s$ is USD5 and $D$ is max value of slope of density function. For the computation of $D$, we assume a log-normal density and volatility implied from ATM price $\hat{V}(k=F)$.
 
 The minimization problem is solved after the loss function is discretized along strike.  
 
