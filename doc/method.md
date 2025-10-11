@@ -21,7 +21,7 @@ However, we choose to imply both from a list of option quotes because of
 
 Now, we estimate future values and discount factors from a list of option quotes.  
 For a particular expiry date of option $T_o$ and end date of future $T_f$, we have a list of quotes of call $C_i$ cand put $P_i$ prices for strike $K_i$.  
-Put-call parity computes a compbination of future value $F_{T_f}$ and discount factor $DF_{T_o}$:  
+Put-call parity computes a combination of future value $F_{T_f}$ and discount factor $DF_{T_o}$:  
 $C_i - P_i = DF_{T_o} (F_{T_f} - K_i)$  
 If we define $a = -DF_{T_o}$ and $b = DF_{T_o} \cdot F_{T_f}$, then  
 $C_i - P_i = a K_i + b$  
@@ -44,7 +44,7 @@ To address the issue, the orginal undiscounted option price $\hat{V}(S,T,k)$ is 
 
 $L(\{V(k)\};\{\hat{V}(k)\}) = \int dk\frac{1}{2D^2}[\frac{\partial^2}{\partial k^2}V(k)]^2 + \int dk\frac{1}{2s^2}(V(k)-\hat{V}(k))^2$
   
-where $s$ is USD5 and $D$ is max value of slope of density function. Here we assume a log-normal density and volatility implied from ATM price $\hat{V}(k=F)$.
+where $s$ is USD5 and $D$ is max value of slope of density function. For the computation of $D$, we assume a log-normal density and volatility implied from ATM price $\hat{V}(k=F)$.
 
 The minimization problem is solved after the loss function is discretized along strike.  
 
