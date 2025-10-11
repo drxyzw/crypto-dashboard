@@ -87,7 +87,12 @@ def fetch_CME_crypto_options(assetName):
             break
         except Exception as e:
             retries += 1
-            print(f"Retrying... {retries} times")
+            print(f"Retrying... {retries} times with {url_base}")
+            try:
+                driver.quit()
+            except:
+                pass
+            time.sleep(2)
             driver = webdriver.Chrome(options=makeSeleniumOption())
     if retries > RETRY_TIMES:
         print("main-table-wrapper not found")
@@ -111,7 +116,12 @@ def fetch_CME_crypto_options(assetName):
                 break
             except Exception as e:
                 retries += 1
-                print(f"Retrying... {retries} times")
+                print(f"Retrying... {retries} times with {url_type}")
+                try:
+                    driver.quit()
+                except:
+                    pass
+                time.sleep(2)
                 driver = webdriver.Chrome(options=makeSeleniumOption())
         if retries > RETRY_TIMES:
             print("main-table-wrapper not found")
@@ -132,7 +142,12 @@ def fetch_CME_crypto_options(assetName):
                     break
                 except Exception as e:
                     retries += 1
-                    print(f"Retrying... {retries} times")
+                    print(f"Retrying... {retries} times with {url_type_expiry}")
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                    time.sleep(2)
                     driver = webdriver.Chrome(options=makeSeleniumOption())
             if retries > RETRY_TIMES:
                 print(".trade-date-row.row not found")
@@ -161,7 +176,12 @@ def fetch_CME_crypto_options(assetName):
                             break
                         except Exception as e:
                             retries += 1
-                            print(f"Retrying... {retries} times")
+                            print(f"Retrying... {retries} times with {url_type_expiry_date}")
+                            try:
+                                driver.quit()
+                            except:
+                                pass
+                            time.sleep(2)
                             driver = webdriver.Chrome(options=makeSeleniumOption())
                     if retries > RETRY_TIMES:
                         print(".main-table-wrapper not found")
