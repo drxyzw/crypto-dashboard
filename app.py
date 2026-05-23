@@ -45,3 +45,4 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar,
 
 if __name__ == "__main__":
     app.run(debug=True)
+
